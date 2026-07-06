@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "Kalro Farm Kenya - E-commerce platform for dairy goats, poultry and eggs",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "install:all": "npm install --prefix server && npm install --prefix client",
     "dev": "concurrently -n server,client -c green,cyan \"npm run dev --prefix server\" \"npm start --prefix client\"",
@@ -10,7 +13,9 @@
     "client": "npm start --prefix client",
     "db:migrate": "npm run db:migrate --prefix server",
     "db:seed": "npm run db:seed --prefix server",
-    "db:reset": "npm run db:reset --prefix server"
+    "db:reset": "npm run db:reset --prefix server",
+    "build": "npm --prefix server install --omit=dev && npm --prefix client install && npm --prefix client run build",
+    "start": "node server/src/index.js"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

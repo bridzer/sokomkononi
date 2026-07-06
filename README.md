@@ -192,15 +192,77 @@ Product and category images are uploaded directly from the admin's device.
 
 ## Production build
 
-```bash
-# Frontend static build
-npm run build --prefix client   # outputs client/build/
+The root `build` and `start` scripts turn the monorepo into a single deployable Node app that serves the React build from the same origin as the API. No CORS, no separate frontend host needed.
 
-# Backend — set NODE_ENV=production and use a process manager (pm2, systemd, etc.)
-NODE_ENV=production npm start --prefix server
+```bash
+# Build (installs server + client deps, builds React)
+npm run build
+
+# Start (Express serves API + client/build)
+NODE_ENV=production npm start
 ```
 
-Serve the frontend from any static host (Netlify, Vercel, S3, Nginx) pointing to `client/build`, and expose the API on a subdomain (e.g. `api.kalrofarm.co.ke`). Update `REACT_APP_API_URL` and `CLIENT_URL` accordingly.
+Alternatively, deploy the frontend to a static host (Vercel/Netlify) and the backend elsewhere — set `REACT_APP_API_URL` on the frontend and `CLIENT_URL` on the backend.
+
+## Deploying to Railway
+
+Railway's build system (Railpack) needs to know this is a Node app deployable from the repo root. The included `railway.json` handles that. Steps:
+
+1. **Push your repo to GitHub** (already done: https://github.com/Edensystems/kalro).
+
+2. **Create a new Railway project** → *Deploy from GitHub repo* → pick this repo. Leave the root directory empty (Railway will read `railway.json` at the root).
+
+3. **Add a PostgreSQL plugin**:
+   - In the project, *New → Database → PostgreSQL*.
+   - Railway automatically exposes `DATABASE_URL` to your service. `server/src/db.js` already prefers `DATABASE_URL`, so nothing else to configure.
+
+4. **Set environment variables** on the web service (Variables tab):
+
+   | Name              | Example / Notes |
+   | ----------------- | --------------- |
+   | `NODE_ENV`        | `production` |
+   | `JWT_SECRET`      | long random string (e.g. `openssl rand -hex 48`) |
+   | `JWT_EXPIRES_IN`  | `7d` |
+   | `ADMIN_EMAIL`     | `admin@kalrofarm.co.ke` |
+   | `ADMIN_PASSWORD`  | strong password |
+   | `ADMIN_NAME`      | `Kalro Admin` |
+   | `WHATSAPP_NUMBER` | `254756908482` |
+   | `PHONE_NUMBER`    | `0756908482` |
+   | `BUSINESS_EMAIL`  | `info@kalrofarm.co.ke` |
+   | `BUSINESS_LOCATION` | `Naivasha, Kenya` |
+   | `CLIENT_URL`      | Leave unset for single-service (same-origin). If you split, set to your frontend URL. |
+
+   `PORT` is provided by Railway — do **not** set it manually.
+
+5. **Persistent uploads** — Railway containers have an ephemeral filesystem. Add a Volume so uploaded images survive redeploys:
+   - Service → *Volumes* → *New Volume* → mount path `/app/server/uploads`.
+
+6. **Deploy** — Railway will now:
+   - Run the `buildCommand` from `railway.json`:
+     `npm --prefix server install --omit=dev && npm --prefix client install && npm --prefix client run build`
+   - Run the `startCommand`: `node server/src/index.js`
+   - Poll `GET /api/health` to verify the service is up.
+
+7. **Migrate + seed the DB** (one-time). Open the service → *Settings → Deploy → Custom Start Command* temporarily, or use the Railway CLI:
+
+   ```bash
+   railway login
+   railway link                    # link this project
+   railway run npm run db:migrate   # applies server/sql/schema.sql
+   railway run npm run db:seed      # creates admin + categories + products
+   ```
+
+8. **Visit the domain** Railway assigns (or attach a custom domain from *Settings → Domains*). The frontend and API are served from the same origin, so:
+   - Storefront: `https://<your-app>.up.railway.app/`
+   - Admin login: `https://<your-app>.up.railway.app/admin/login`
+   - API health check: `https://<your-app>.up.railway.app/api/health`
+
+### Troubleshooting Railway
+
+- **"No start command"** — Ensure `railway.json` is at the repo root and committed. Alternatively, in the service *Settings*, set the *Build Command* and *Start Command* manually with the same values.
+- **`DATABASE_URL` not set** — Verify the PG plugin is attached to *this* service (Variables tab should show `DATABASE_URL`).
+- **`client/build not found`** — The build step didn't run. Check the *Build logs* for the client build output.
+- **Images disappear after redeploy** — You skipped the Volume; add one mounted at `/app/server/uploads`.
 
 ## License
 
