@@ -1,0 +1,8 @@
+{
+  "short_name": "Kalro Farm",
+  "name": "Kalro Farm Kenya",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#2d7c2f",
+  "background_color": "#ffffff"
+}
