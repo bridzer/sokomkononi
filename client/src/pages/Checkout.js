@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
-import { formatKsh, whatsappUrl, cartWhatsAppMessage, BUSINESS } from '../utils/format';
+import { formatKsh, cartWhatsAppMessage, PHONE_NUMBERS } from '../utils/format';
 import api from '../api/client';
+import WhatsAppButton from '../components/WhatsAppButton';
 
 const KENYA_COUNTIES = [
   'Nairobi','Mombasa','Kisumu','Nakuru','Uasin Gishu','Kiambu','Machakos','Kajiado',
@@ -143,14 +144,13 @@ export default function Checkout() {
             <button className="btn-primary flex-1" type="submit" disabled={submitting}>
               {submitting ? 'Placing order…' : 'Place order'}
             </button>
-            <a
-              href={whatsappUrl(waMessage)}
-              target="_blank"
-              rel="noreferrer"
+            <WhatsAppButton
+              message={waMessage}
               className="btn-whatsapp flex-1"
+              placement="top-end"
             >
               Order via WhatsApp
-            </a>
+            </WhatsAppButton>
           </div>
           <p className="text-xs text-slate-500">
             By placing this order you agree to be contacted by Kalro Farm to confirm details.
@@ -189,9 +189,14 @@ export default function Checkout() {
           </div>
           <div className="mt-4 text-xs text-slate-500">
             Need help? Call{' '}
-            <a href={`tel:${BUSINESS.phoneIntl}`} className="text-brand-700 font-semibold">
-              {BUSINESS.phone}
-            </a>
+            {PHONE_NUMBERS.map((p, i) => (
+              <Fragment key={p.id}>
+                {i > 0 && <span className="text-slate-400"> or </span>}
+                <a href={`tel:${p.intl}`} className="text-brand-700 font-semibold">
+                  {p.display}
+                </a>
+              </Fragment>
+            ))}
           </div>
         </aside>
       </div>

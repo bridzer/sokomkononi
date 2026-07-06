@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Fragment } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import api from '../api/client';
-import { formatKsh, whatsappUrl, orderWhatsAppMessage, BUSINESS } from '../utils/format';
+import { formatKsh, orderWhatsAppMessage, PHONE_NUMBERS } from '../utils/format';
 import { useCart } from '../context/CartContext';
+import WhatsAppButton from '../components/WhatsAppButton';
 
 const FALLBACK_IMG =
   'https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=1000&q=80';
@@ -144,23 +145,27 @@ export default function ProductDetail() {
             </button>
           </div>
 
-          <a
-            href={whatsappUrl(orderWhatsAppMessage(product))}
-            target="_blank"
-            rel="noreferrer"
+          <WhatsAppButton
+            message={orderWhatsAppMessage(product)}
             className="btn-whatsapp w-full mt-3"
+            placement="top-start"
           >
             <svg viewBox="0 0 32 32" className="w-5 h-5" fill="currentColor">
               <path d="M16 .5C7.4.5.5 7.4.5 16c0 2.8.8 5.5 2.2 7.8L.5 31.5l7.9-2.1c2.2 1.2 4.8 1.9 7.6 1.9 8.6 0 15.5-6.9 15.5-15.5S24.6.5 16 .5z" />
             </svg>
             Order via WhatsApp
-          </a>
+          </WhatsAppButton>
 
           <div className="mt-4 text-sm text-slate-600">
             Prefer to call? Dial{' '}
-            <a href={`tel:${BUSINESS.phoneIntl}`} className="text-brand-700 font-semibold">
-              {BUSINESS.phone}
-            </a>
+            {PHONE_NUMBERS.map((p, i) => (
+              <Fragment key={p.id}>
+                {i > 0 && <span className="text-slate-400"> or </span>}
+                <a href={`tel:${p.intl}`} className="text-brand-700 font-semibold">
+                  {p.display}
+                </a>
+              </Fragment>
+            ))}
           </div>
         </div>
       </div>

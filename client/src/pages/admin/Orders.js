@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../api/client';
-import { formatKsh, whatsappUrl } from '../../utils/format';
+import { formatKsh, whatsappUrl, normalizeKenyanPhone } from '../../utils/format';
 
 const STATUSES = ['pending', 'confirmed', 'processing', 'delivered', 'cancelled'];
 const statusColor = {
@@ -193,16 +193,22 @@ export default function AdminOrders() {
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
-              <a
-                href={whatsappUrl(
-                  `Hello ${detail.customer_name}, this is Kalro Farm regarding your order ${detail.order_number}.`
-                )}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-whatsapp ml-auto"
-              >
-                Contact on WhatsApp
-              </a>
+              {(() => {
+                const to = normalizeKenyanPhone(detail.customer_phone);
+                return to ? (
+                  <a
+                    href={whatsappUrl(
+                      `Hello ${detail.customer_name}, this is Kalro Farm regarding your order ${detail.order_number}.`,
+                      to
+                    )}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-whatsapp ml-auto"
+                  >
+                    Contact on WhatsApp
+                  </a>
+                ) : null;
+              })()}
               <a href={`tel:${detail.customer_phone}`} className="btn-outline">
                 Call customer
               </a>

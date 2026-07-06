@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../api/client';
-import { BUSINESS, whatsappUrl } from '../utils/format';
+import { BUSINESS, PHONE_NUMBERS, WHATSAPP_NUMBERS, whatsappUrl } from '../utils/format';
 
 export default function Contact() {
   const [form, setForm] = useState({ name: '', phone: '', email: '', subject: '', message: '' });
@@ -39,27 +39,50 @@ export default function Contact() {
         <div>
           <h2 className="text-xl font-semibold text-slate-800">Reach us directly</h2>
           <div className="mt-4 space-y-3">
-            <div className="card p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-700 grid place-items-center font-bold">P</div>
-              <div>
-                <div className="text-xs text-slate-500">Phone</div>
-                <a href={`tel:${BUSINESS.phoneIntl}`} className="font-semibold text-slate-800">
-                  {BUSINESS.phone}
-                </a>
-              </div>
-            </div>
-            <a
-              href={whatsappUrl(`Hello ${BUSINESS.name}, I'd like to talk.`)}
-              target="_blank"
-              rel="noreferrer"
-              className="card p-4 flex items-center gap-3 hover:bg-slate-50"
-            >
-              <div className="w-10 h-10 rounded-full bg-[#25D366] text-white grid place-items-center font-bold">W</div>
-              <div>
-                <div className="text-xs text-slate-500">WhatsApp</div>
-                <div className="font-semibold text-slate-800">{BUSINESS.phone}</div>
-              </div>
-            </a>
+            {PHONE_NUMBERS.map((p) => (
+              <a
+                key={p.id}
+                href={`tel:${p.intl}`}
+                className="card p-4 flex items-center gap-3 hover:bg-slate-50"
+              >
+                <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-700 grid place-items-center flex-shrink-0">
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
+                    <path d="M6.6 10.8c1.4 2.7 3.6 4.9 6.3 6.3l2.1-2.1c.3-.3.7-.4 1.1-.3 1.2.4 2.5.6 3.9.6.6 0 1 .4 1 1V19c0 .6-.4 1-1 1C10.6 20 4 13.4 4 5c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.4.2 2.7.6 3.9.1.4 0 .8-.3 1.1L6.6 10.8z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-slate-500">Phone · {p.label}</div>
+                  <div className="font-semibold text-slate-800">{p.display}</div>
+                  {p.subtitle && (
+                    <div className="text-xs text-slate-500">{p.subtitle}</div>
+                  )}
+                </div>
+                <svg viewBox="0 0 24 24" className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+            ))}
+            {WHATSAPP_NUMBERS.map((n) => (
+              <a
+                key={n.id}
+                href={whatsappUrl(`Hello ${BUSINESS.name}, I'd like to talk.`, n.number)}
+                target="_blank"
+                rel="noreferrer"
+                className="card p-4 flex items-center gap-3 hover:bg-slate-50"
+              >
+                <div className="w-10 h-10 rounded-full bg-[#25D366] text-white grid place-items-center font-bold">W</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-slate-500">WhatsApp · {n.label}</div>
+                  <div className="font-semibold text-slate-800">{n.display}</div>
+                  {n.subtitle && (
+                    <div className="text-xs text-slate-500">{n.subtitle}</div>
+                  )}
+                </div>
+                <svg viewBox="0 0 24 24" className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+            ))}
             <div className="card p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-700 grid place-items-center font-bold">E</div>
               <div>

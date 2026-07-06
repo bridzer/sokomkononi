@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { BUSINESS } from '../utils/format';
+import ContactBar from './ContactBar';
 
 export default function Navbar() {
   const { count } = useCart();
@@ -19,24 +19,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
-      <div className="bg-brand-700 text-white text-xs">
-        <div className="max-w-7xl mx-auto px-4 py-1.5 flex flex-wrap items-center justify-between gap-2">
-          <span>Free countrywide delivery on all orders</span>
-          <span className="flex items-center gap-3">
-            <a href={`tel:${BUSINESS.phoneIntl}`} className="hover:underline">
-              Call: {BUSINESS.phone}
-            </a>
-            <a
-              href={`https://wa.me/${BUSINESS.whatsapp}`}
-              target="_blank"
-              rel="noreferrer"
-              className="hover:underline"
-            >
-              WhatsApp
-            </a>
-          </span>
-        </div>
-      </div>
+      <ContactBar />
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-full bg-brand-600 text-white grid place-items-center font-bold">

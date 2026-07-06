@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import ProductCard from '../components/ProductCard';
-import { BUSINESS, whatsappUrl } from '../utils/format';
+import StatsSection from '../components/StatsSection';
+import WhatsAppButton from '../components/WhatsAppButton';
+import PhoneButton from '../components/PhoneButton';
+import { BUSINESS } from '../utils/format';
 
 export default function Home() {
   const [featured, setFeatured] = useState([]);
@@ -12,6 +15,8 @@ export default function Home() {
     api.get('/products?featured=true&limit=8').then((r) => setFeatured(r.data.products || []));
     api.get('/categories').then((r) => setCategories(r.data.categories || []));
   }, []);
+
+  const orderMessage = `Hello ${BUSINESS.name}, I'd like to place an order.`;
 
   return (
     <div>
@@ -37,14 +42,9 @@ export default function Home() {
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link to="/shop" className="btn-primary">Browse products</Link>
-              <a
-                href={whatsappUrl(`Hello ${BUSINESS.name}, I'd like to place an order.`)}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-whatsapp"
-              >
+              <WhatsAppButton message={orderMessage} className="btn-whatsapp" placement="bottom-start">
                 Order via WhatsApp
-              </a>
+              </WhatsAppButton>
             </div>
             <div className="mt-6 flex flex-wrap gap-6 text-sm text-white/85">
               <span>✓ Free countrywide delivery</span>
@@ -89,6 +89,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Trust / Stats */}
+      <StatsSection />
+
       {/* Featured Products */}
       <section className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-end justify-between mb-6">
@@ -122,9 +125,9 @@ export default function Home() {
             </ul>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link to="/about" className="btn-outline">About the farm</Link>
-              <a href={`tel:${BUSINESS.phoneIntl}`} className="btn-primary">
-                Call {BUSINESS.phone}
-              </a>
+              <PhoneButton className="btn-primary" placement="top-start">
+                Call our team
+              </PhoneButton>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -163,17 +166,12 @@ export default function Home() {
           Talk to us on WhatsApp or call — delivery is free countrywide.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <a
-            href={whatsappUrl(`Hello ${BUSINESS.name}, I'd like to place an order.`)}
-            target="_blank"
-            rel="noreferrer"
-            className="btn-whatsapp"
-          >
-            WhatsApp {BUSINESS.phone}
-          </a>
-          <a href={`tel:${BUSINESS.phoneIntl}`} className="btn-outline">
-            Call {BUSINESS.phone}
-          </a>
+          <WhatsAppButton message={orderMessage} placement="top-center">
+            Order via WhatsApp
+          </WhatsAppButton>
+          <PhoneButton className="btn-outline" placement="top-center">
+            Call our team
+          </PhoneButton>
         </div>
       </section>
     </div>

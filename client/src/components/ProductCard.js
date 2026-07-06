@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { formatKsh, whatsappUrl, orderWhatsAppMessage } from '../utils/format';
+import { formatKsh, orderWhatsAppMessage } from '../utils/format';
 import { useCart } from '../context/CartContext';
+import WhatsAppButton from './WhatsAppButton';
 
 const FALLBACK_IMG =
   'https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=800&q=80';
@@ -9,8 +10,14 @@ const FALLBACK_IMG =
 export default function ProductCard({ product }) {
   const { addItem } = useCart();
   return (
-    <div className="card overflow-hidden group flex flex-col">
-      <Link to={`/product/${product.slug}`} className="block relative aspect-[4/3] bg-slate-100 overflow-hidden">
+    // NOTE: no `overflow-hidden` on the outer card — that would clip any
+    // portal fallbacks and (previously) the WhatsAppButton popover. The
+    // image is clipped by its own wrapper's `overflow-hidden` + `rounded-t-xl`.
+    <div className="card group flex flex-col">
+      <Link
+        to={`/product/${product.slug}`}
+        className="block relative aspect-[4/3] bg-slate-100 overflow-hidden rounded-t-xl"
+      >
         <img
           src={product.image_url || FALLBACK_IMG}
           alt={product.name}
@@ -53,17 +60,16 @@ export default function ProductCard({ product }) {
           >
             Add to cart
           </button>
-          <a
-            href={whatsappUrl(orderWhatsAppMessage(product))}
-            target="_blank"
-            rel="noreferrer"
+          <WhatsAppButton
+            message={orderWhatsAppMessage(product)}
             className="btn-whatsapp text-sm py-1.5 px-3"
-            title="Order via WhatsApp"
+            placement="bottom-end"
+            title="Order via WhatsApp on"
           >
             <svg viewBox="0 0 32 32" className="w-4 h-4" fill="currentColor">
               <path d="M16 .5C7.4.5.5 7.4.5 16c0 2.8.8 5.5 2.2 7.8L.5 31.5l7.9-2.1c2.2 1.2 4.8 1.9 7.6 1.9 8.6 0 15.5-6.9 15.5-15.5S24.6.5 16 .5z" />
             </svg>
-          </a>
+          </WhatsAppButton>
         </div>
       </div>
     </div>

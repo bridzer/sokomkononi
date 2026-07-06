@@ -42,7 +42,9 @@ CREATE DATABASE kalro_farm;
 
 ## 2. Configure environment
 
-Copy `server/.env.example` to `server/.env` and update the values:
+There are two `.env` files — one for the API and one for the React client.
+
+### Server (`server/.env`)
 
 ```bash
 cp server/.env.example server/.env
@@ -54,6 +56,31 @@ Important values:
 - `JWT_SECRET` — set to a long random string in production
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — bootstrap admin account created during seed
 - `WHATSAPP_NUMBER` — international format without `+`, e.g. `254756908482`
+
+### Client (`client/.env`)
+
+```bash
+cp client/.env.example client/.env
+```
+
+All customer-facing phone / WhatsApp numbers are driven from this file so the admin can update them without touching code. Only variables starting with `REACT_APP_` are exposed to the browser.
+
+| Variable                          | Purpose                                                     |
+| --------------------------------- | ----------------------------------------------------------- |
+| `REACT_APP_BUSINESS_NAME`         | Business name shown across the site                        |
+| `REACT_APP_BUSINESS_LOCATION`     | Business location (footer/contact)                          |
+| `REACT_APP_BUSINESS_EMAIL`        | Public contact email                                        |
+| `REACT_APP_PHONE_{n}_LABEL`       | Short heading, e.g. `Main Line`                             |
+| `REACT_APP_PHONE_{n}_SUBTITLE`    | One-line description, e.g. `Sales & orders`                 |
+| `REACT_APP_PHONE_{n}_NUMBER`      | Call number in any Kenyan format (`+254…`, `0…`, `254…`)    |
+| `REACT_APP_PHONE_{n}_WHATSAPP`    | Optional WhatsApp override. Leave **blank** to hide from the WhatsApp chooser (call-only line) |
+| `REACT_APP_PHONE_{n}_DISPLAY`     | Optional pretty display, e.g. `020 822 4938`                |
+
+`{n}` starts at `1` and can go up to `8`. Delete a block to remove that line entirely.
+
+> ⚠️ **These are compiled in at build time.** After editing `client/.env`:
+> - Local dev: restart `npm start` (in `client/`).
+> - Railway: update the env vars in the service settings and redeploy — Railway rebuilds the client on every deploy.
 
 ## 3. Install dependencies
 
@@ -231,6 +258,22 @@ Railway's build system (Railpack) needs to know this is a Node app deployable fr
    | `BUSINESS_EMAIL`  | `info@kalrofarm.co.ke` |
    | `BUSINESS_LOCATION` | `Naivasha, Kenya` |
    | `CLIENT_URL`      | Leave unset for single-service (same-origin). If you split, set to your frontend URL. |
+
+   Also add the client-side (`REACT_APP_*`) vars so the deployed site shows the right business name and phone lines:
+
+   | Name                                | Example                       |
+   | ----------------------------------- | ----------------------------- |
+   | `REACT_APP_BUSINESS_NAME`           | `Kalro Farm Kenya`            |
+   | `REACT_APP_BUSINESS_LOCATION`       | `Naivasha, Kenya`             |
+   | `REACT_APP_BUSINESS_EMAIL`          | `info@kalrofarm.co.ke`        |
+   | `REACT_APP_PHONE_1_LABEL`           | `Main Line`                   |
+   | `REACT_APP_PHONE_1_SUBTITLE`        | `Sales & orders`              |
+   | `REACT_APP_PHONE_1_NUMBER`          | `+254208224938`               |
+   | `REACT_APP_PHONE_1_WHATSAPP`        | `+254756908482`               |
+   | `REACT_APP_PHONE_1_DISPLAY`         | `020 822 4938`                |
+   | `REACT_APP_PHONE_2_LABEL`           | `Naivasha Branch`             |
+   | `REACT_APP_PHONE_2_SUBTITLE`        | `Poultry & eggs`              |
+   | `REACT_APP_PHONE_2_NUMBER`          | `+254756908482`               |
 
    `PORT` is provided by Railway — do **not** set it manually.
 

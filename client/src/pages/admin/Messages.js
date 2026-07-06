@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../api/client';
-import { whatsappUrl } from '../../utils/format';
+import { whatsappUrl, normalizeKenyanPhone } from '../../utils/format';
 
 export default function AdminMessages() {
   const [messages, setMessages] = useState([]);
@@ -57,16 +57,22 @@ export default function AdminMessages() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                {m.phone && (
-                  <a
-                    href={whatsappUrl(`Hello ${m.name}, this is Kalro Farm replying to your enquiry.`)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn-whatsapp text-xs py-1 px-3"
-                  >
-                    WhatsApp
-                  </a>
-                )}
+                {(() => {
+                  const to = normalizeKenyanPhone(m.phone);
+                  return to ? (
+                    <a
+                      href={whatsappUrl(
+                        `Hello ${m.name}, this is Kalro Farm replying to your enquiry.`,
+                        to
+                      )}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-whatsapp text-xs py-1 px-3"
+                    >
+                      WhatsApp
+                    </a>
+                  ) : null;
+                })()}
                 {!m.is_read && (
                   <button className="btn-ghost text-xs py-1" onClick={() => markRead(m.id)}>
                     Mark read

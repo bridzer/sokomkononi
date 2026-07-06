@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import api from '../api/client';
-import {
-  BUSINESS,
-  cartWhatsAppMessage,
-  formatKsh,
-  whatsappUrl,
-} from '../utils/format';
+import { cartWhatsAppMessage, formatKsh } from '../utils/format';
+import WhatsAppButton from '../components/WhatsAppButton';
+import PhoneButton from '../components/PhoneButton';
 
 export default function OrderSuccess() {
   const { orderNumber } = useParams();
@@ -80,17 +77,12 @@ export default function OrderSuccess() {
         </div>
 
         <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-          <a
-            href={whatsappUrl(waMessage)}
-            target="_blank"
-            rel="noreferrer"
-            className="btn-whatsapp"
-          >
+          <WhatsAppButton message={waMessage} className="btn-whatsapp" placement="top-center">
             Confirm on WhatsApp
-          </a>
-          <a href={`tel:${BUSINESS.phoneIntl}`} className="btn-outline">
-            Call {BUSINESS.phone}
-          </a>
+          </WhatsAppButton>
+          <PhoneButton className="btn-outline" placement="top-center">
+            Call our team
+          </PhoneButton>
           <Link to="/shop" className="btn-ghost">
             Continue shopping
           </Link>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BUSINESS, whatsappUrl } from '../utils/format';
+import { BUSINESS } from '../utils/format';
+import WhatsAppButton from '../components/WhatsAppButton';
 
 export default function About() {
   return (
@@ -67,14 +68,13 @@ export default function About() {
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-3">
           <Link to="/shop" className="btn-primary">Browse products</Link>
-          <a
-            href={whatsappUrl(`Hello ${BUSINESS.name}, I'd like to learn more about your farm.`)}
-            target="_blank"
-            rel="noreferrer"
+          <WhatsAppButton
+            message={`Hello ${BUSINESS.name}, I'd like to learn more about your farm.`}
             className="btn-whatsapp"
+            placement="top-center"
           >
-            WhatsApp {BUSINESS.phone}
-          </a>
+            Chat on WhatsApp
+          </WhatsAppButton>
         </div>
       </section>
     </div>
