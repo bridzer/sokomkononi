@@ -33,7 +33,7 @@ export default function Home() {
           <div className="max-w-2xl">
             <span className="badge bg-brand-500 text-white mb-4">Kalro Farm Kenya · Naivasha</span>
             <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">
-              Healthy Dairy Goats, Poultry &amp; Farm-Fresh Eggs
+              Healthy Dairy Cattle,Goats, Poultry &amp; Farm-Fresh Eggs
             </h1>
             <p className="mt-4 text-lg text-white/90">
               High-quality Saneen, Alpine and Toggenburg dairy goats, boer goats,

@@ -150,7 +150,7 @@ const _lines = buildLines();
 export const BUSINESS = {
   name: envStr('REACT_APP_BUSINESS_NAME') || 'Kalro Farm Kenya',
   location: envStr('REACT_APP_BUSINESS_LOCATION') || 'Naivasha, Kenya',
-  email: envStr('REACT_APP_BUSINESS_EMAIL') || 'info@kalrofarm.co.ke',
+  email: envStr('REACT_APP_BUSINESS_EMAIL') || 'info@kalro.store',
 };
 
 /** All configured phone lines (for calling). */

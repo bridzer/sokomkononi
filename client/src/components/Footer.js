@@ -30,7 +30,7 @@ export default function Footer() {
             <div className="text-white font-bold text-lg">Kalro Farm Kenya</div>
           </div>
           <p className="mt-3 text-sm text-brand-200">
-            Healthy dairy goats, boer goats, poultry &amp; farm-fresh eggs. Free
+            Healthy dairy Cattle, Goats, Boer goats, Poultry &amp; farm-fresh eggs. Free
             countrywide delivery.
           </p>
         </div>
@@ -38,6 +38,7 @@ export default function Footer() {
         <div>
           <h4 className="text-white font-semibold mb-3">Shop</h4>
           <ul className="space-y-2 text-sm">
+            <li><Link to="/shop/cattle" className="hover:text-white">Dairy Cattle</Link></li>
             <li><Link to="/shop/dairy-goats" className="hover:text-white">Dairy Goats</Link></li>
             <li><Link to="/shop/boer-goats" className="hover:text-white">Boer Goats</Link></li>
             <li><Link to="/shop/poultry" className="hover:text-white">Poultry</Link></li>
@@ -50,7 +51,6 @@ export default function Footer() {
           <ul className="space-y-2 text-sm">
             <li><Link to="/about" className="hover:text-white">About us</Link></li>
             <li><Link to="/contact" className="hover:text-white">Contact</Link></li>
-            <li><Link to="/admin/login" className="hover:text-white">Admin</Link></li>
           </ul>
         </div>
 

@@ -12,6 +12,7 @@ export default function Navbar() {
     { to: '/shop', label: 'Shop' },
     { to: '/shop/dairy-goats', label: 'Dairy Goats' },
     { to: '/shop/poultry', label: 'Poultry' },
+    { to: '/shop/cattle', label: 'Dairy Cattle' },
     { to: '/shop/eggs', label: 'Eggs' },
     { to: '/about', label: 'About' },
     { to: '/contact', label: 'Contact' },
