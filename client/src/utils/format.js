@@ -102,7 +102,7 @@ const FALLBACK_LINES = [
     subtitle: 'Sales & orders',
     number: '+254208224938',
     whatsapp: '+254756908482',
-    display: '020 822 4938',
+    display: '020 822 4938/0143876296',
   },
   {
     id: 'naivasha',

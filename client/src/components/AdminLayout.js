@@ -28,13 +28,17 @@ export default function AdminLayout() {
           open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="p-5 border-b border-brand-800 flex items-center gap-2">
-          <div className="w-9 h-9 rounded-full bg-white text-brand-700 grid place-items-center font-bold">
-            K
-          </div>
-          <div>
-            <div className="font-bold">Kalro Admin</div>
-            <div className="text-[11px] text-brand-200">{user?.email}</div>
+        <div className="p-5 border-b border-brand-800 flex items-center gap-2.5">
+          <span className="w-10 h-10 rounded-full bg-white grid place-items-center overflow-hidden shrink-0 ring-1 ring-white/10">
+            <img
+              src="/kalro-logo.png"
+              alt="Kalro Farm Kenya logo"
+              className="w-full h-full object-cover"
+            />
+          </span>
+          <div className="min-w-0">
+            <div className="font-bold leading-tight">Kalro Admin</div>
+            <div className="text-[11px] text-brand-200 truncate">{user?.email}</div>
           </div>
         </div>
         <nav className="p-3 space-y-1">

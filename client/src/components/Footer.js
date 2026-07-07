@@ -20,14 +20,7 @@ function WaIcon() {
 
 function MailIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="w-3.5 h-3.5 flex-shrink-0"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
       <rect x="3" y="5" width="18" height="14" rx="2" strokeLinejoin="round" />
       <path d="M3.5 6.5l8.5 6 8.5-6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -36,19 +29,8 @@ function MailIcon() {
 
 function PinIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="w-3.5 h-3.5 flex-shrink-0"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M12 21s-7-6.6-7-12a7 7 0 1114 0c0 5.4-7 12-7 12z"
-      />
+    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21s-7-6.6-7-12a7 7 0 1114 0c0 5.4-7 12-7 12z" />
       <circle cx="12" cy="9" r="2.5" />
     </svg>
   );
@@ -56,42 +38,52 @@ function PinIcon() {
 
 export default function Footer() {
   return (
-    <footer className="bg-brand-900 text-brand-100 mt-16">
-      <div className="max-w-7xl mx-auto px-4 py-12 grid gap-8 md:grid-cols-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-full bg-white text-brand-700 grid place-items-center font-bold">
-              K
+    <footer className="bg-brand-900 text-brand-100 mt-10 lg:mt-16">
+      <div className="max-w-7xl mx-auto px-4 py-10 md:py-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="sm:col-span-2 lg:col-span-1">
+          <div className="flex items-center gap-3">
+            <span className="shrink-0 w-11 h-11 rounded-full bg-white ring-1 ring-white/20 overflow-hidden inline-flex items-center justify-center">
+              <img
+                src="/kalro-logo.png"
+                alt="Kalro Farm Kenya logo"
+                className="w-full h-full object-cover"
+              />
+            </span>
+            <div>
+              <div className="text-white font-bold text-lg leading-tight">Kalro Farm</div>
+              <div className="text-[10px] uppercase tracking-[0.2em] text-brand-200/80">
+                Kenya · Naivasha
+              </div>
             </div>
-            <div className="text-white font-bold text-lg">Kalro Farm Kenya</div>
           </div>
-          <p className="mt-3 text-sm text-brand-200">
-            Healthy dairy Cattle, Goats, Boer goats, Poultry &amp; farm-fresh eggs. Free
-            countrywide delivery.
+          <p className="mt-3 text-sm text-brand-200 leading-relaxed">
+            Healthy dairy cattle,  &amp; boer goats, poultry and farm-fresh eggs.
+            Vaccinated, disease-free stock delivered countrywide.
           </p>
         </div>
 
         <div>
-          <h4 className="text-white font-semibold mb-3">Shop</h4>
+          <h4 className="text-white font-semibold mb-3 text-sm uppercase tracking-wider">Shop</h4>
           <ul className="space-y-2 text-sm">
-            <li><Link to="/shop/cattle" className="hover:text-white">Dairy Cattle</Link></li>
-            <li><Link to="/shop/dairy-goats" className="hover:text-white">Dairy Goats</Link></li>
-            <li><Link to="/shop/boer-goats" className="hover:text-white">Boer Goats</Link></li>
-            <li><Link to="/shop/poultry" className="hover:text-white">Poultry</Link></li>
-            <li><Link to="/shop/eggs" className="hover:text-white">Eggs</Link></li>
+            <li><Link to="/shop/cattle" className="hover:text-white transition-colors">Dairy Cattle</Link></li>
+            <li><Link to="/shop/dairy-goats" className="hover:text-white transition-colors">Dairy Goats</Link></li>
+            <li><Link to="/shop/boer-goats" className="hover:text-white transition-colors">Boer Goats</Link></li>
+            <li><Link to="/shop/poultry" className="hover:text-white transition-colors">Poultry</Link></li>
+            <li><Link to="/shop/eggs" className="hover:text-white transition-colors">Eggs</Link></li>
           </ul>
         </div>
 
         <div>
-          <h4 className="text-white font-semibold mb-3">Company</h4>
+          <h4 className="text-white font-semibold mb-3 text-sm uppercase tracking-wider">Company</h4>
           <ul className="space-y-2 text-sm">
-            <li><Link to="/about" className="hover:text-white">About us</Link></li>
-            <li><Link to="/contact" className="hover:text-white">Contact</Link></li>
+            <li><Link to="/about" className="hover:text-white transition-colors">About us</Link></li>
+            <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+            <li><Link to="/shop" className="hover:text-white transition-colors">All products</Link></li>
           </ul>
         </div>
 
-        <div>
-          <h4 className="text-white font-semibold mb-3">Contact</h4>
+        <div className="sm:col-span-2 lg:col-span-1">
+          <h4 className="text-white font-semibold mb-3 text-sm uppercase tracking-wider">Get in touch</h4>
           <ul className="space-y-2 text-sm">
             <li className="inline-flex items-center gap-2">
               <PinIcon />
@@ -101,11 +93,12 @@ export default function Footer() {
               <li key={p.id}>
                 <a
                   href={`tel:${p.intl}`}
-                  className="inline-flex items-center gap-2 hover:text-white"
+                  className="inline-flex items-center gap-2 hover:text-white transition-colors"
                 >
                   <PhoneIcon />
                   <span>
-                    <span className="text-brand-200/80">{p.label}:</span> {p.display}
+                    <span className="text-brand-200/80">{p.label}:</span>{' '}
+                    <span className="tabular-nums">{p.display}</span>
                   </span>
                 </a>
               </li>
@@ -116,11 +109,12 @@ export default function Footer() {
                   href={whatsappUrl(`Hello ${BUSINESS.name}`, n.number)}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 hover:text-white"
+                  className="inline-flex items-center gap-2 hover:text-white transition-colors"
                 >
                   <WaIcon />
                   <span>
-                    <span className="text-brand-200/80">WhatsApp {n.label}:</span> {n.display}
+                    <span className="text-brand-200/80">WhatsApp {n.label}:</span>{' '}
+                    <span className="tabular-nums">{n.display}/0143876296</span>
                   </span>
                 </a>
               </li>
@@ -129,7 +123,7 @@ export default function Footer() {
               <li>
                 <a
                   href={`mailto:${BUSINESS.email}`}
-                  className="inline-flex items-center gap-2 hover:text-white break-all"
+                  className="inline-flex items-center gap-2 hover:text-white transition-colors break-all"
                   aria-label={`Email ${BUSINESS.email}`}
                 >
                   <MailIcon />
@@ -142,12 +136,18 @@ export default function Footer() {
           </ul>
         </div>
       </div>
+
       <div className="border-t border-brand-800">
-        <div className="max-w-7xl mx-auto px-4 py-4 text-xs text-brand-200 flex flex-col sm:flex-row justify-between gap-2">
+        <div className="max-w-7xl mx-auto px-4 py-4 text-[11px] sm:text-xs text-brand-200 flex flex-col sm:flex-row justify-between gap-2">
           <span>© {new Date().getFullYear()} Kalro Farm Kenya. All rights reserved.</span>
-          <span>Guide book available for new farmers • Disease-free • Fully vaccinated</span>
+          <span className="text-brand-200/80">
+            Guide book available · Disease-free · Fully vaccinated
+          </span>
         </div>
       </div>
+
+      {/* On mobile the bottom action bar covers ~64px — nudge the footer up */}
+      <div className="lg:hidden h-2" aria-hidden="true" />
     </footer>
   );
 }

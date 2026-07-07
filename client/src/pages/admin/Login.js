@@ -32,9 +32,13 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-brand-800 grid place-items-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="mx-auto w-14 h-14 rounded-full bg-white text-brand-700 grid place-items-center text-2xl font-extrabold">
-            K
-          </div>
+          <span className="mx-auto w-16 h-16 rounded-full bg-white grid place-items-center overflow-hidden ring-4 ring-white/10 shadow-lg">
+            <img
+              src="/kalro-logo.png"
+              alt="Kalro Farm Kenya logo"
+              className="w-full h-full object-cover"
+            />
+          </span>
           <h1 className="text-white text-2xl font-bold mt-3">Kalro Farm Admin</h1>
           <p className="text-brand-200 text-sm">Sign in to manage the store</p>
         </div>

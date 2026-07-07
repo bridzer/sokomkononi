@@ -20,141 +20,213 @@ export default function Home() {
 
   return (
     <div>
-      {/* Hero */}
+      {/* -------- Hero -------- */}
       <section className="relative">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
             backgroundImage:
-              'linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.4)), url(https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=1800&q=80)',
+              'linear-gradient(rgba(20,60,30,0.72), rgba(0,0,0,0.45)), url(https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=1800&q=80)',
           }}
         />
-        <div className="relative max-w-7xl mx-auto px-4 py-24 md:py-32 text-white">
+        <div className="relative max-w-7xl mx-auto px-4 py-14 sm:py-20 md:py-32 text-white">
           <div className="max-w-2xl">
-            <span className="badge bg-brand-500 text-white mb-4">Kalro Farm Kenya · Naivasha</span>
-            <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">
-              Healthy Dairy Cattle,Goats, Poultry &amp; Farm-Fresh Eggs
+            <span className="inline-flex items-center gap-2 badge bg-accent-500 text-white mb-3 sm:mb-4 shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              Kalro Farm Kenya · Naivasha
+            </span>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-[1.1]">
+              Healthy Dairy Cattle, Goats, Poultry &amp; Farm-Fresh Eggs
             </h1>
-            <p className="mt-4 text-lg text-white/90">
-              High-quality Saneen, Alpine and Toggenburg dairy goats, boer goats,
-              commercial layers, kanga birds and farm-fresh eggs. Fully vaccinated,
+            <p className="mt-3 sm:mt-4 text-base sm:text-lg text-white/90 max-w-xl">
+              High-quality Freshian, Ayshire, Alpine and Toggenburg Dairy goats, Boer goats,
+              Commercial layers, Kanga birds and farm-fresh eggs. Fully vaccinated,
               disease-free, delivered countrywide.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link to="/shop" className="btn-primary">Browse products</Link>
-              <WhatsAppButton message={orderMessage} className="btn-whatsapp" placement="bottom-start">
+
+            <div className="mt-5 sm:mt-6 flex flex-col sm:flex-row flex-wrap gap-2.5 sm:gap-3">
+              <Link to="/shop" className="btn-primary text-sm sm:text-base py-2.5 sm:py-3 px-5">
+                Browse products
+              </Link>
+              <WhatsAppButton
+                message={orderMessage}
+                className="btn-whatsapp text-sm sm:text-base py-2.5 sm:py-3 px-5"
+                placement="bottom-start"
+              >
+                <svg viewBox="0 0 32 32" className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor">
+                  <path d="M16 .5C7.4.5.5 7.4.5 16c0 2.8.8 5.5 2.2 7.8L.5 31.5l7.9-2.1c2.2 1.2 4.8 1.9 7.6 1.9C24.6 31.3 31.5 24.4 31.5 15.8 31.5 7.4 24.6.5 16 .5z" />
+                </svg>
                 Order via WhatsApp
               </WhatsAppButton>
             </div>
-            <div className="mt-6 flex flex-wrap gap-6 text-sm text-white/85">
-              <span>✓ Free countrywide delivery</span>
-              <span>✓ Fully vaccinated &amp; registered</span>
-              <span>✓ Twin genetics</span>
+
+            <div className="mt-5 sm:mt-6 flex flex-wrap gap-x-4 gap-y-2 text-[13px] sm:text-sm text-white/90">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-brand-300">✓</span> Free countrywide delivery
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-brand-300">✓</span> Fully vaccinated
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-brand-300">✓</span> Twin genetics
+              </span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="max-w-7xl mx-auto px-4 py-14">
-        <div className="flex items-end justify-between mb-6">
+      {/* -------- Marketing strip: trust badges -------- */}
+      <section className="bg-brand-50/60 border-y border-brand-100">
+        <div className="max-w-7xl mx-auto px-4 py-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+          {[
+            { icon: '🚚', title: 'Free delivery', sub: 'Countrywide' },
+            { icon: '🛡️', title: 'Disease-free', sub: 'Fully vaccinated' },
+            { icon: '💬', title: 'WhatsApp order', sub: 'Reply in minutes' },
+            { icon: '⭐', title: '10+ years', sub: 'Trusted by farmers' },
+          ].map((t) => (
+            <div
+              key={t.title}
+              className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-1 sm:py-2"
+            >
+              <span className="text-lg sm:text-xl leading-none">{t.icon}</span>
+              <div className="leading-tight">
+                <div className="text-[12px] sm:text-sm font-semibold text-slate-800">
+                  {t.title}
+                </div>
+                <div className="text-[10px] sm:text-xs text-slate-500 hidden sm:block">
+                  {t.sub}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* -------- Categories -------- */}
+      <section className="max-w-7xl mx-auto px-4 py-8 sm:py-10 md:py-14">
+        <div className="flex items-end justify-between mb-4 sm:mb-6">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-800">Shop by category</h2>
-            <p className="text-slate-500 text-sm">Everything from day-old chicks to milk-ready mothers.</p>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">
+              Shop by category
+            </h2>
+            <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
+              Everything from day-old chicks to milk-ready mothers.
+            </p>
           </div>
-          <Link to="/shop" className="text-brand-700 text-sm font-medium hover:underline">
+          <Link
+            to="/shop"
+            className="text-brand-700 text-xs sm:text-sm font-semibold hover:underline shrink-0 ml-3"
+          >
             View all →
           </Link>
         </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-5 grid-cols-2 lg:grid-cols-4">
           {categories.map((c) => (
             <Link
               key={c.id}
               to={`/shop/${c.slug}`}
-              className="group relative overflow-hidden rounded-xl aspect-[4/3] shadow bg-slate-200"
+              className="group relative overflow-hidden rounded-xl aspect-[4/3] shadow bg-slate-200 hover:shadow-lg transition-shadow"
             >
               {c.image_url ? (
                 <img
                   src={c.image_url}
                   alt={c.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-brand-600 to-brand-800" />
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                <div className="font-semibold text-lg">{c.name}</div>
-                <div className="text-xs text-white/80">{c.product_count} products</div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-4 text-white">
+                <div className="font-semibold text-sm sm:text-lg leading-tight">
+                  {c.name}
+                </div>
+                <div className="text-[10px] sm:text-xs text-white/80">
+                  {c.product_count} product{c.product_count === 1 ? '' : 's'}
+                </div>
               </div>
             </Link>
           ))}
         </div>
       </section>
 
-      {/* Trust / Stats */}
+      {/* -------- Trust / Stats -------- */}
       <StatsSection />
 
-      {/* Featured Products */}
-      <section className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-end justify-between mb-6">
+      {/* -------- Featured Products -------- */}
+      <section className="max-w-7xl mx-auto px-4 py-8 sm:py-10">
+        <div className="flex items-end justify-between mb-4 sm:mb-6">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-800">Featured products</h2>
-            <p className="text-slate-500 text-sm">Popular picks from our farm.</p>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">
+              Featured products
+            </h2>
+            <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
+              Popular picks from our farm.
+            </p>
           </div>
-          <Link to="/shop" className="text-brand-700 text-sm font-medium hover:underline">
+          <Link
+            to="/shop"
+            className="text-brand-700 text-xs sm:text-sm font-semibold hover:underline shrink-0 ml-3"
+          >
             Shop all →
           </Link>
         </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-5 grid-cols-2 lg:grid-cols-4">
           {featured.map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}
         </div>
       </section>
 
-      {/* Why choose */}
-      <section className="bg-brand-50 mt-14">
-        <div className="max-w-7xl mx-auto px-4 py-14 grid md:grid-cols-2 gap-10 items-center">
+      {/* -------- Why choose -------- */}
+      <section className="bg-brand-50 mt-8 sm:mt-14">
+        <div className="max-w-7xl mx-auto px-4 py-10 sm:py-14 grid md:grid-cols-2 gap-6 md:gap-10 items-center">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-brand-800">Why choose Kalro Farm?</h2>
-            <ul className="mt-4 space-y-3 text-slate-700">
-              <li>✅ Guide book available for new farmers</li>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-brand-800">
+              Why choose Kalro Farm?
+            </h2>
+            <ul className="mt-3 sm:mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-slate-700 text-sm sm:text-[15px]">
+              <li>✅ Guide book for new farmers</li>
               <li>✅ Disease-free dairy goats</li>
-              <li>✅ Fully vaccinated and registered</li>
-              <li>✅ Twin genetics for higher productivity</li>
-              <li>✅ 3-4 litres of milk production per day</li>
-              <li>✅ Free countrywide delivery on order</li>
+              <li>✅ Fully vaccinated &amp; registered</li>
+              <li>✅ Twin genetics for productivity</li>
+              <li>✅ 3-4 litres milk / day</li>
+              <li>✅ Free countrywide delivery</li>
             </ul>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link to="/about" className="btn-outline">About the farm</Link>
-              <PhoneButton className="btn-primary" placement="top-start">
+            <div className="mt-5 sm:mt-6 flex flex-wrap gap-2.5 sm:gap-3">
+              <Link to="/about" className="btn-outline text-sm sm:text-base">
+                About the farm
+              </Link>
+              <PhoneButton className="btn-primary text-sm sm:text-base" placement="top-start">
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
+                  <path d="M6.6 10.8c1.4 2.7 3.6 4.9 6.3 6.3l2.1-2.1c.3-.3.7-.4 1.1-.3 1.2.4 2.5.6 3.9.6.6 0 1 .4 1 1V19c0 .6-.4 1-1 1C10.6 20 4 13.4 4 5c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.4.2 2.7.6 3.9.1.4 0 .8-.3 1.1L6.6 10.8z" />
+                </svg>
                 Call our team
               </PhoneButton>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-4">
             <img
-              className="rounded-xl aspect-square object-cover"
+              className="rounded-xl aspect-square object-cover w-full"
               src="https://images.unsplash.com/photo-1524024973431-2ad916746881?auto=format&fit=crop&w=700&q=80"
               alt="Goats"
               loading="lazy"
             />
             <img
-              className="rounded-xl aspect-square object-cover"
+              className="rounded-xl aspect-square object-cover w-full"
               src="https://images.unsplash.com/photo-1587486913049-53fc88980cfc?auto=format&fit=crop&w=700&q=80"
               alt="Eggs"
               loading="lazy"
             />
             <img
-              className="rounded-xl aspect-square object-cover"
+              className="rounded-xl aspect-square object-cover w-full"
               src="https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?auto=format&fit=crop&w=700&q=80"
               alt="Poultry"
               loading="lazy"
             />
             <img
-              className="rounded-xl aspect-square object-cover"
+              className="rounded-xl aspect-square object-cover w-full"
               src="https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=700&q=80"
               alt="Boer goats"
               loading="lazy"
@@ -163,19 +235,34 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA banner */}
-      <section className="max-w-7xl mx-auto px-4 py-14 text-center">
-        <h2 className="text-3xl font-bold text-slate-800">Ready to order?</h2>
-        <p className="mt-2 text-slate-600">
-          Talk to us on WhatsApp or call — delivery is free countrywide.
-        </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <WhatsAppButton message={orderMessage} placement="top-center">
-            Order via WhatsApp
-          </WhatsAppButton>
-          <PhoneButton className="btn-outline" placement="top-center">
-            Call our team
-          </PhoneButton>
+      {/* -------- CTA banner -------- */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-brand-700 to-brand-900 text-white">
+        <div className="max-w-7xl mx-auto px-4 py-10 sm:py-14 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold">Ready to order?</h2>
+          <p className="mt-2 text-white/85 text-sm sm:text-base">
+            Talk to us on WhatsApp or call — delivery is free countrywide.
+          </p>
+          <div className="mt-5 sm:mt-6 flex flex-wrap justify-center gap-2.5 sm:gap-3">
+            <WhatsAppButton
+              message={orderMessage}
+              placement="top-center"
+              className="btn-whatsapp text-sm sm:text-base py-3 px-5 shadow-lg"
+            >
+              <svg viewBox="0 0 32 32" className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor">
+                <path d="M16 .5C7.4.5.5 7.4.5 16c0 2.8.8 5.5 2.2 7.8L.5 31.5l7.9-2.1c2.2 1.2 4.8 1.9 7.6 1.9C24.6 31.3 31.5 24.4 31.5 15.8 31.5 7.4 24.6.5 16 .5z" />
+              </svg>
+              Order via WhatsApp
+            </WhatsAppButton>
+            <PhoneButton
+              className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 ring-1 ring-white/30 text-white text-sm sm:text-base py-3 px-5 rounded-lg"
+              placement="top-center"
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor">
+                <path d="M6.6 10.8c1.4 2.7 3.6 4.9 6.3 6.3l2.1-2.1c.3-.3.7-.4 1.1-.3 1.2.4 2.5.6 3.9.6.6 0 1 .4 1 1V19c0 .6-.4 1-1 1C10.6 20 4 13.4 4 5c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.4.2 2.7.6 3.9.1.4 0 .8-.3 1.1L6.6 10.8z" />
+              </svg>
+              Call our team
+            </PhoneButton>
+          </div>
         </div>
       </section>
     </div>

@@ -1,8 +1,18 @@
 {
   "short_name": "Kalro Farm",
   "name": "Kalro Farm Kenya",
+  "description": "Vaccinated, disease-free livestock and farm-fresh eggs. Free countrywide delivery.",
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#2d7c2f",
-  "background_color": "#ffffff"
+  "orientation": "portrait",
+  "theme_color": "#166534",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "kalro-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }
