@@ -98,7 +98,7 @@ export default function Footer() {
                   <PhoneIcon />
                   <span>
                     <span className="text-brand-200/80">{p.label}:</span>{' '}
-                    <span className="tabular-nums">{p.display}/0143876296</span>
+                    <span className="tabular-nums">{p.display}</span>
                   </span>
                 </a>
               </li>

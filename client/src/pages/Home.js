@@ -9,11 +9,11 @@ import { BUSINESS } from '../utils/format';
 import Shop from './Shop';
 export default function Home() {
   const [featured, setFeatured] = useState([]);
-  const [categories, setCategories] = useState([]);
+ 
 
   useEffect(() => {
     api.get('/products?featured=true&limit=8').then((r) => setFeatured(r.data.products || []));
-    api.get('/categories').then((r) => setCategories(r.data.categories || []));
+   
   }, []);
 
   const orderMessage = `Hello ${BUSINESS.name}, I'd like to place an order.`;
