@@ -10,14 +10,48 @@ const router = express.Router();
 router.use(requireAdmin);
 
 // --------- Uploads ---------
-router.post('/uploads', upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const url = `/uploads/${req.file.filename}`;
-  res.status(201).json({
-    url,
-    filename: req.file.filename,
-    size: req.file.size,
-    mimetype: req.file.mimetype,
+// Multer errors (file too large, wrong mime) surface as errors with `.status`
+// so the shared errorHandler formats them as JSON — we still catch them here
+// to log the specific failure for easier debugging.
+router.post('/uploads', (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      console.warn('[upload:single] rejected:', err.message);
+      return next(err);
+    }
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const url = `/uploads/${req.file.filename}`;
+    console.log(`[upload:single] ${req.file.filename} (${req.file.size} bytes)`);
+    res.status(201).json({
+      url,
+      filename: req.file.filename,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+    });
+  });
+});
+
+// Batch upload — up to 10 files at once under the `images` field name.
+router.post('/uploads/batch', (req, res, next) => {
+  upload.array('images', 10)(req, res, (err) => {
+    if (err) {
+      console.warn('[upload:batch] rejected:', err.message);
+      return next(err);
+    }
+    const files = req.files || [];
+    if (!files.length) return res.status(400).json({ error: 'No files uploaded' });
+    console.log(
+      `[upload:batch] ${files.length} file(s):`,
+      files.map((f) => f.filename).join(', ')
+    );
+    res.status(201).json({
+      files: files.map((f) => ({
+        url: `/uploads/${f.filename}`,
+        filename: f.filename,
+        size: f.size,
+        mimetype: f.mimetype,
+      })),
+    });
   });
 });
 
@@ -160,15 +194,46 @@ router.get('/products', async (req, res, next) => {
   }
 });
 
+/**
+ * Normalize the `images` payload. Accepts:
+ *   - an array of strings (URLs)
+ *   - an array of objects like { url: '/uploads/foo.jpg', ... }
+ * Returns { images: string[], cover: string|null } where cover is the first
+ * usable URL.
+ */
+function normalizeImages(input) {
+  if (!Array.isArray(input)) return { images: null, cover: null };
+  const urls = input
+    .map((v) => (typeof v === 'string' ? v : v && typeof v === 'object' ? v.url : null))
+    .map((v) => (typeof v === 'string' ? v.trim() : ''))
+    .filter(Boolean);
+  return { images: urls, cover: urls[0] || null };
+}
+
 router.post('/products', async (req, res, next) => {
   try {
     const {
       category_id, name, description, breed, age_stage, unit, price,
-      stock, image_url, is_active, is_featured,
+      stock, image_url, images: imagesInput, is_active, is_featured,
     } = req.body || {};
+
+    console.log('[products:create] received', {
+      name,
+      image_url: image_url ?? null,
+      imagesReceived: Array.isArray(imagesInput),
+      imagesCount: Array.isArray(imagesInput) ? imagesInput.length : 'n/a',
+    });
+
     if (!name || price === undefined) {
       return res.status(400).json({ error: 'name and price are required' });
     }
+
+    // When `images` is provided, it wins and cover is derived from images[0].
+    // Otherwise fall back to a legacy single `image_url`.
+    const { images: imgs, cover } = normalizeImages(imagesInput);
+    const finalImages = imgs || (image_url ? [image_url] : []);
+    const finalCover = cover || image_url || null;
+
     const baseSlug = slugify(name);
     const uniqCheck = await query('SELECT COUNT(*)::int AS c FROM products WHERE slug LIKE $1', [
       `${baseSlug}%`,
@@ -177,13 +242,13 @@ router.post('/products', async (req, res, next) => {
     const r = await query(
       `INSERT INTO products
         (category_id, name, slug, description, breed, age_stage, unit, price,
-         stock, image_url, is_active, is_featured)
-       VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,'each'),$8,COALESCE($9,0),$10,
-               COALESCE($11,TRUE),COALESCE($12,FALSE))
+         stock, image_url, images, is_active, is_featured)
+       VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,'each'),$8,COALESCE($9,0),$10,$11::jsonb,
+               COALESCE($12,TRUE),COALESCE($13,FALSE))
        RETURNING *`,
       [
         category_id || null, name, slug, description || null, breed || null, age_stage || null,
-        unit, price, stock, image_url || null, is_active, is_featured,
+        unit, price, stock, finalCover, JSON.stringify(finalImages), is_active, is_featured,
       ]
     );
     res.status(201).json({ product: r.rows[0] });
@@ -196,8 +261,26 @@ router.put('/products/:id', async (req, res, next) => {
   try {
     const {
       category_id, name, description, breed, age_stage, unit, price,
-      stock, image_url, is_active, is_featured,
+      stock, image_url, images: imagesInput, is_active, is_featured,
     } = req.body || {};
+
+    console.log('[products:update] received', {
+      id: req.params.id,
+      image_url: image_url ?? null,
+      imagesReceived: Array.isArray(imagesInput),
+      imagesCount: Array.isArray(imagesInput) ? imagesInput.length : 'n/a',
+    });
+
+    // If the caller sent an `images` array we update BOTH the gallery and the
+    // cover column (keeping them in sync). When the caller explicitly clears
+    // the gallery (images = []) we need to force image_url to null too, which
+    // COALESCE alone can't express. The CASE below picks between "force" and
+    // "coalesce" modes using the boolean $10.
+    const hasImagesUpdate = Array.isArray(imagesInput);
+    const { images: imgs, cover } = normalizeImages(imagesInput);
+    const nextCover = hasImagesUpdate ? cover : (image_url ?? null);
+    const nextImages = hasImagesUpdate ? JSON.stringify(imgs) : null;
+
     const r = await query(
       `UPDATE products SET
         category_id = COALESCE($1, category_id),
@@ -208,13 +291,14 @@ router.put('/products/:id', async (req, res, next) => {
         unit = COALESCE($6, unit),
         price = COALESCE($7, price),
         stock = COALESCE($8, stock),
-        image_url = COALESCE($9, image_url),
-        is_active = COALESCE($10, is_active),
-        is_featured = COALESCE($11, is_featured),
+        image_url = CASE WHEN $10::boolean THEN $9 ELSE COALESCE($9, image_url) END,
+        images = COALESCE($11::jsonb, images),
+        is_active = COALESCE($12, is_active),
+        is_featured = COALESCE($13, is_featured),
         updated_at = NOW()
-       WHERE id=$12 RETURNING *`,
-      [category_id, name, description, breed, age_stage, unit, price, stock, image_url,
-       is_active, is_featured, req.params.id]
+       WHERE id=$14 RETURNING *`,
+      [category_id, name, description, breed, age_stage, unit, price, stock,
+       nextCover, hasImagesUpdate, nextImages, is_active, is_featured, req.params.id]
     );
     if (!r.rowCount) return res.status(404).json({ error: 'Product not found' });
     res.json({ product: r.rows[0] });

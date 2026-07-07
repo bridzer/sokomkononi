@@ -1,8 +1,13 @@
 import axios from 'axios';
 
+// Note: we deliberately do NOT set a default Content-Type here. axios
+// automatically picks the right one based on the request body:
+//   - plain JS object  -> application/json
+//   - FormData         -> multipart/form-data; boundary=... (via the browser)
+// Setting a static default breaks file uploads because it prevents the browser
+// from adding the multipart boundary parameter.
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || '/api',
-  headers: { 'Content-Type': 'application/json' },
 });
 
 api.interceptors.request.use((config) => {

@@ -30,13 +30,22 @@ export default function ImageUpload({ value, onChange, label = 'Image' }) {
 
     setUploading(true);
     try {
-      const { data } = await api.post('/admin/uploads', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      // Let axios/browser set Content-Type with the multipart boundary.
+      const { data } = await api.post('/admin/uploads', form);
       onChange?.(data.url);
       toast.success('Image uploaded');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Upload failed');
+      // eslint-disable-next-line no-console
+      console.error('[ImageUpload] upload failed', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      });
+      toast.error(
+        err.response?.data?.error ||
+          err.message ||
+          'Upload failed — check console for details'
+      );
     } finally {
       setUploading(false);
     }

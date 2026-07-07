@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../api/client';
 import { formatKsh } from '../../utils/format';
-import ImageUpload from '../../components/ImageUpload';
+import MultiImageUpload from '../../components/MultiImageUpload';
 
 const empty = {
   id: null,
@@ -15,9 +15,18 @@ const empty = {
   price: '',
   stock: 0,
   image_url: '',
+  images: [],
   is_active: true,
   is_featured: false,
 };
+
+// Reconcile the `images` array with the legacy `image_url` field so the form
+// always shows a gallery even for products created before this feature.
+function coerceImages(product) {
+  const arr = Array.isArray(product?.images) ? product.images.filter(Boolean) : [];
+  if (arr.length) return arr;
+  return product?.image_url ? [product.image_url] : [];
+}
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -46,30 +55,62 @@ export default function AdminProducts() {
     // eslint-disable-next-line
   }, []);
 
-  const openNew = () => setEditing({ ...empty });
-  const openEdit = (p) => setEditing({ ...p, category_id: p.category_id || '' });
+  const openNew = () => setEditing({ ...empty, images: [] });
+  const openEdit = (p) =>
+    setEditing({
+      ...p,
+      category_id: p.category_id || '',
+      images: coerceImages(p),
+    });
   const close = () => setEditing(null);
 
   const save = async (e) => {
     e.preventDefault();
     try {
+      const images = Array.isArray(editing.images) ? editing.images.filter(Boolean) : [];
       const payload = {
         ...editing,
         price: Number(editing.price),
         stock: Number(editing.stock),
         category_id: editing.category_id ? Number(editing.category_id) : null,
+        images,
+        image_url: images[0] || null,
       };
-      if (editing.id) {
-        await api.put(`/admin/products/${editing.id}`, payload);
-        toast.success('Product updated');
-      } else {
-        await api.post('/admin/products', payload);
-        toast.success('Product created');
-      }
+
+      // Temporary diagnostic — helps confirm the gallery is being sent. Safe
+      // to remove once the flow is verified in your environment.
+      // eslint-disable-next-line no-console
+      console.log('[admin/products save] payload', {
+        id: editing.id,
+        image_url: payload.image_url,
+        imagesCount: payload.images.length,
+        images: payload.images,
+      });
+
+      const { data } = editing.id
+        ? await api.put(`/admin/products/${editing.id}`, payload)
+        : await api.post('/admin/products', payload);
+
+      // eslint-disable-next-line no-console
+      console.log('[admin/products save] response', {
+        id: data?.product?.id,
+        image_url: data?.product?.image_url,
+        imagesCount: Array.isArray(data?.product?.images)
+          ? data.product.images.length
+          : 'n/a',
+      });
+
+      toast.success(editing.id ? 'Product updated' : 'Product created');
       close();
       load();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Save failed');
+      // eslint-disable-next-line no-console
+      console.error('[admin/products save] failed', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      });
+      toast.error(err.response?.data?.error || err.message || 'Save failed');
     }
   };
 
@@ -126,15 +167,30 @@ export default function AdminProducts() {
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => (
+                {products.map((p) => {
+                  const gallerySize = Array.isArray(p.images) ? p.images.length : 0;
+                  return (
                   <tr key={p.id} className="border-t border-slate-100">
                     <td className="p-3">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={p.image_url}
-                          alt=""
-                          className="w-10 h-10 rounded object-cover bg-slate-100"
-                        />
+                        <div className="relative w-10 h-10 shrink-0">
+                          {p.image_url ? (
+                            <img
+                              src={p.image_url}
+                              alt=""
+                              className="w-10 h-10 rounded object-cover bg-slate-100"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded bg-slate-200 grid place-items-center text-slate-400 text-[10px]">
+                              n/a
+                            </div>
+                          )}
+                          {gallerySize > 1 && (
+                            <span className="absolute -bottom-1 -right-1 text-[10px] leading-none font-semibold bg-slate-900 text-white rounded-full px-1.5 py-0.5 ring-2 ring-white">
+                              +{gallerySize - 1}
+                            </span>
+                          )}
+                        </div>
                         <div>
                           <div className="font-medium text-slate-800">{p.name}</div>
                           <div className="text-xs text-slate-500">{p.breed}</div>
@@ -166,7 +222,8 @@ export default function AdminProducts() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {products.length === 0 && (
                   <tr>
                     <td colSpan="7" className="p-8 text-center text-slate-500">
@@ -262,10 +319,12 @@ export default function AdminProducts() {
                 />
               </div>
               <div className="sm:col-span-2">
-                <ImageUpload
-                  label="Product image"
-                  value={editing.image_url || ''}
-                  onChange={(url) => setEditing({ ...editing, image_url: url })}
+                <MultiImageUpload
+                  label="Product images (first = cover)"
+                  value={editing.images || []}
+                  onChange={(images) =>
+                    setEditing({ ...editing, images, image_url: images[0] || '' })
+                  }
                 />
               </div>
               <div className="sm:col-span-2">

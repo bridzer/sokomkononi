@@ -18,6 +18,42 @@ function WaIcon() {
   );
 }
 
+function MailIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="w-3.5 h-3.5 flex-shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <rect x="3" y="5" width="18" height="14" rx="2" strokeLinejoin="round" />
+      <path d="M3.5 6.5l8.5 6 8.5-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function PinIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="w-3.5 h-3.5 flex-shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 21s-7-6.6-7-12a7 7 0 1114 0c0 5.4-7 12-7 12z"
+      />
+      <circle cx="12" cy="9" r="2.5" />
+    </svg>
+  );
+}
+
 export default function Footer() {
   return (
     <footer className="bg-brand-900 text-brand-100 mt-16">
@@ -57,7 +93,10 @@ export default function Footer() {
         <div>
           <h4 className="text-white font-semibold mb-3">Contact</h4>
           <ul className="space-y-2 text-sm">
-            <li>{BUSINESS.location}</li>
+            <li className="inline-flex items-center gap-2">
+              <PinIcon />
+              <span>{BUSINESS.location}</span>
+            </li>
             {PHONE_NUMBERS.map((p) => (
               <li key={p.id}>
                 <a
@@ -86,11 +125,20 @@ export default function Footer() {
                 </a>
               </li>
             ))}
-            <li>
-              <a href={`mailto:${BUSINESS.email}`} className="hover:text-white">
-                {BUSINESS.email}
-              </a>
-            </li>
+            {BUSINESS.email && (
+              <li>
+                <a
+                  href={`mailto:${BUSINESS.email}`}
+                  className="inline-flex items-center gap-2 hover:text-white break-all"
+                  aria-label={`Email ${BUSINESS.email}`}
+                >
+                  <MailIcon />
+                  <span>
+                    <span className="text-brand-200/80">Email:</span> {BUSINESS.email}
+                  </span>
+                </a>
+              </li>
+            )}
           </ul>
         </div>
       </div>

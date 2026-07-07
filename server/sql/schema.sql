@@ -41,12 +41,23 @@ CREATE TABLE IF NOT EXISTS products (
   unit         VARCHAR(60) NOT NULL DEFAULT 'each',
   price        NUMERIC(12,2) NOT NULL CHECK (price >= 0),
   stock        INT NOT NULL DEFAULT 0 CHECK (stock >= 0),
-  image_url    TEXT,
+  image_url    TEXT,                                     -- primary/cover image (denormalized from images[0])
+  images       JSONB NOT NULL DEFAULT '[]'::jsonb,       -- ordered gallery of image URLs
   is_active    BOOLEAN NOT NULL DEFAULT TRUE,
   is_featured  BOOLEAN NOT NULL DEFAULT FALSE,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Migration for existing installs: add the `images` column if missing and
+-- backfill it from any single-image row so the gallery has at least one photo.
+ALTER TABLE products ADD COLUMN IF NOT EXISTS images JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+UPDATE products
+SET images = jsonb_build_array(image_url)
+WHERE (images IS NULL OR images = '[]'::jsonb)
+  AND image_url IS NOT NULL
+  AND image_url <> '';
 
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active);

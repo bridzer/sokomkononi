@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Fragment } from 'react';
+import React, { useEffect, useMemo, useState, Fragment } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { formatKsh, orderWhatsAppMessage, PHONE_NUMBERS } from '../utils/format';
@@ -8,22 +8,45 @@ import WhatsAppButton from '../components/WhatsAppButton';
 const FALLBACK_IMG =
   'https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=1000&q=80';
 
+// Merge legacy image_url + gallery into a single ordered list of URLs, keeping
+// the cover first and removing duplicates. Falls back to a stock image so the
+// UI never renders an empty gallery.
+function collectImages(product) {
+  const list = [];
+  const seen = new Set();
+  const push = (u) => {
+    if (!u || seen.has(u)) return;
+    seen.add(u);
+    list.push(u);
+  };
+  push(product?.image_url);
+  if (Array.isArray(product?.images)) product.images.forEach(push);
+  if (!list.length) list.push(FALLBACK_IMG);
+  return list;
+}
+
 export default function ProductDetail() {
   const { slug } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
+  const [activeIdx, setActiveIdx] = useState(0);
   const { addItem } = useCart();
   const navigate = useNavigate();
 
   useEffect(() => {
     setLoading(true);
+    setActiveIdx(0);
     api
       .get(`/products/${slug}`)
       .then((r) => setProduct(r.data.product))
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  const images = useMemo(() => collectImages(product), [product]);
+  const hasGallery = images.length > 1;
+  const activeImage = images[Math.min(activeIdx, images.length - 1)] || images[0];
 
   if (loading) {
     return <div className="max-w-7xl mx-auto px-4 py-16 text-center text-slate-500">Loading…</div>;
@@ -59,12 +82,69 @@ export default function ProductDetail() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-8">
-        <div className="rounded-xl overflow-hidden bg-slate-100 aspect-[4/3]">
-          <img
-            src={product.image_url || FALLBACK_IMG}
-            alt={product.name}
-            className="w-full h-full object-cover"
-          />
+        {/* --- Gallery --- */}
+        <div>
+          <div className="rounded-xl overflow-hidden bg-slate-100 aspect-[4/3] relative group">
+            <img
+              key={activeImage}
+              src={activeImage}
+              alt={product.name}
+              className="w-full h-full object-cover"
+            />
+            {hasGallery && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Previous image"
+                  onClick={() =>
+                    setActiveIdx((i) => (i - 1 + images.length) % images.length)
+                  }
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white shadow grid place-items-center text-slate-700 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                >
+                  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next image"
+                  onClick={() => setActiveIdx((i) => (i + 1) % images.length)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 hover:bg-white shadow grid place-items-center text-slate-700 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                >
+                  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <div className="absolute bottom-2 right-2 text-xs font-medium bg-black/60 text-white rounded-full px-2 py-0.5">
+                  {activeIdx + 1} / {images.length}
+                </div>
+              </>
+            )}
+          </div>
+
+          {hasGallery && (
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
+              {images.map((url, idx) => {
+                const active = idx === activeIdx;
+                return (
+                  <button
+                    key={`${url}-${idx}`}
+                    type="button"
+                    onClick={() => setActiveIdx(idx)}
+                    aria-label={`Show image ${idx + 1}`}
+                    aria-pressed={active}
+                    className={`snap-start shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-slate-100 transition-all ${
+                      active
+                        ? 'ring-2 ring-brand-600 ring-offset-2 ring-offset-white'
+                        : 'opacity-70 hover:opacity-100 ring-1 ring-slate-200'
+                    }`}
+                  >
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div>

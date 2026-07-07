@@ -9,7 +9,9 @@
     "dev": "nodemon src/index.js",
     "db:migrate": "node src/scripts/migrate.js",
     "db:seed": "node src/scripts/seed.js",
-    "db:reset": "node src/scripts/migrate.js reset && node src/scripts/seed.js"
+    "db:reset": "node src/scripts/migrate.js reset && node src/scripts/seed.js",
+    "db:cleanup:images": "node src/scripts/cleanup-images.js",
+    "test:upload": "node src/scripts/test-upload.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

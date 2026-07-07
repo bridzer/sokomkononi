@@ -71,14 +71,18 @@ export default function Home() {
             <Link
               key={c.id}
               to={`/shop/${c.slug}`}
-              className="group relative overflow-hidden rounded-xl aspect-[4/3] shadow"
+              className="group relative overflow-hidden rounded-xl aspect-[4/3] shadow bg-slate-200"
             >
-              <img
-                src={c.image_url}
-                alt={c.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                loading="lazy"
-              />
+              {c.image_url ? (
+                <img
+                  src={c.image_url}
+                  alt={c.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-brand-600 to-brand-800" />
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
                 <div className="font-semibold text-lg">{c.name}</div>

@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 
+const { pool } = require('./db');
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
 const categoryRoutes = require('./routes/categories');
@@ -94,10 +95,35 @@ app.use((req, res) => {
 
 app.use(errorHandler);
 
+/**
+ * Ensure the database schema is up-to-date on boot. The schema.sql file is
+ * fully idempotent (CREATE TABLE IF NOT EXISTS, ALTER TABLE ADD COLUMN IF NOT
+ * EXISTS, guarded backfills), so re-running it costs a few ms and prevents
+ * "column does not exist" errors after a git pull. Set AUTO_MIGRATE=false to
+ * opt out (e.g. in production where migrations are a separate step).
+ */
+async function ensureSchema() {
+  if (process.env.AUTO_MIGRATE === 'false') return;
+  try {
+    const schemaPath = path.join(__dirname, '..', 'sql', 'schema.sql');
+    const sql = fs.readFileSync(schemaPath, 'utf8');
+    await pool.query(sql);
+    console.log('[startup] Schema sync OK.');
+  } catch (err) {
+    console.warn(
+      '[startup] Schema sync failed:',
+      err.message,
+      '\n         Run `npm run db:migrate` manually to fix.'
+    );
+  }
+}
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(
-    `Kalro Farm ${clientBuildExists ? 'app' : 'API'} listening on port ${PORT}` +
-      (process.env.NODE_ENV === 'production' ? ' (production)' : '')
-  );
+ensureSchema().finally(() => {
+  app.listen(PORT, () => {
+    console.log(
+      `Kalro Farm ${clientBuildExists ? 'app' : 'API'} listening on port ${PORT}` +
+        (process.env.NODE_ENV === 'production' ? ' (production)' : '')
+    );
+  });
 });
