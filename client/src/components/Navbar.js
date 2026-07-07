@@ -24,9 +24,9 @@ export default function Navbar() {
   const links = [
     { to: '/', label: 'Home' },
     { to: '/shop', label: 'Shop' },
-    { to: '/shop/dairy-goats', label: 'Dairy Goats' },
-    { to: '/shop/poultry', label: 'Poultry' },
-    { to: '/shop/cattle', label: 'Dairy Cattle' },
+    { to: '/shop/cattle', label: 'Cattle' },
+    { to: '/shop/dairy-goats', label: 'Goats' },
+    { to: '/shop/poultry', label: 'Poultry' },    
     { to: '/shop/eggs', label: 'Eggs' },
     { to: '/about', label: 'About' },
     { to: '/contact', label: 'Contact' },

@@ -8,13 +8,7 @@ import PhoneButton from '../components/PhoneButton';
 import { BUSINESS } from '../utils/format';
 import Shop from './Shop';
 export default function Home() {
-  const [featured, setFeatured] = useState([]);
- 
-
-  useEffect(() => {
-    api.get('/products?featured=true&limit=8').then((r) => setFeatured(r.data.products || []));
-   
-  }, []);
+  
 
   const orderMessage = `Hello ${BUSINESS.name}, I'd like to place an order.`;
 
@@ -112,29 +106,7 @@ export default function Home() {
       <StatsSection />
 
       {/* -------- Featured Products -------- */}
-      <section className="max-w-7xl mx-auto px-4 py-8 sm:py-10">
-        <div className="flex items-end justify-between mb-4 sm:mb-6">
-          <div>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">
-              Featured products
-            </h2>
-            <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-              Popular picks from our farm.
-            </p>
-          </div>
-          <Link
-            to="/shop"
-            className="text-brand-700 text-xs sm:text-sm font-semibold hover:underline shrink-0 ml-3"
-          >
-            Shop all →
-          </Link>
-        </div>
-        <div className="grid gap-3 sm:gap-5 grid-cols-2 lg:grid-cols-4">
-          {featured.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
-      </section>
+      
 
       {/* -------- Why choose -------- */}
       <section className="bg-brand-50 mt-8 sm:mt-14">
