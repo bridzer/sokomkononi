@@ -1,7 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/client';
-import ProductCard from '../components/ProductCard';
 import StatsSection from '../components/StatsSection';
 import WhatsAppButton from '../components/WhatsAppButton';
 import PhoneButton from '../components/PhoneButton';
@@ -109,7 +107,7 @@ export default function Home() {
       
 
       {/* -------- Why choose -------- */}
-      <section className="bg-brand-50 mt-8 sm:mt-14">
+      <section className="bg-brand-50 mt-2 sm:mt-14">
         <div className="max-w-7xl mx-auto px-4 py-10 sm:py-14 grid md:grid-cols-2 gap-6 md:gap-10 items-center">
           <div>
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-brand-800">
@@ -138,14 +136,14 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-2 sm:gap-4">
             <img
               className="rounded-xl aspect-square object-cover w-full"
-              src="https://images.unsplash.com/photo-1524024973431-2ad916746881?auto=format&fit=crop&w=700&q=80"
-              alt="Goats"
+              src="https://kalro.store/uploads/img-mrayyl13-3f306de60b73.jpg"
+              alt="Dairy Cattle"
               loading="lazy"
             />
             <img
               className="rounded-xl aspect-square object-cover w-full"
-              src="https://images.unsplash.com/photo-1587486913049-53fc88980cfc?auto=format&fit=crop&w=700&q=80"
-              alt="Eggs"
+              src="https://kalro.store/uploads/img-mraztgnh-a8357f2cf480.jpg"
+              alt="Goats"
               loading="lazy"
             />
             <img

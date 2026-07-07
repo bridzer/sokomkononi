@@ -27,7 +27,6 @@ export default function Navbar() {
     { to: '/shop/cattle', label: 'Cattle' },
     { to: '/shop/dairy-goats', label: 'Goats' },
     { to: '/shop/poultry', label: 'Poultry' },    
-    { to: '/shop/eggs', label: 'Eggs' },
     { to: '/about', label: 'About' },
     { to: '/contact', label: 'Contact' },
   ];
