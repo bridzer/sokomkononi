@@ -154,7 +154,7 @@ export default function Home() {
             />
             <img
               className="rounded-xl aspect-square object-cover w-full"
-              src="https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=700&q=80"
+              src="https://kalro.store/uploads/img-mrayhpwf-044321efa21b.jpg"
               alt="Boer goats"
               loading="lazy"
             />
