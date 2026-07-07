@@ -6,7 +6,7 @@ import StatsSection from '../components/StatsSection';
 import WhatsAppButton from '../components/WhatsAppButton';
 import PhoneButton from '../components/PhoneButton';
 import { BUSINESS } from '../utils/format';
-
+import Shop from './Shop';
 export default function Home() {
   const [featured, setFeatured] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -103,52 +103,9 @@ export default function Home() {
       </section>
 
       {/* -------- Categories -------- */}
-      <section className="max-w-7xl mx-auto px-4 py-8 sm:py-10 md:py-14">
-        <div className="flex items-end justify-between mb-4 sm:mb-6">
-          <div>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">
-              Shop by category
-            </h2>
-            <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-              Everything from day-old chicks to milk-ready mothers.
-            </p>
-          </div>
-          <Link
-            to="/shop"
-            className="text-brand-700 text-xs sm:text-sm font-semibold hover:underline shrink-0 ml-3"
-          >
-            View all →
-          </Link>
-        </div>
-        <div className="grid gap-3 sm:gap-5 grid-cols-2 lg:grid-cols-4">
-          {categories.map((c) => (
-            <Link
-              key={c.id}
-              to={`/shop/${c.slug}`}
-              className="group relative overflow-hidden rounded-xl aspect-[4/3] shadow bg-slate-200 hover:shadow-lg transition-shadow"
-            >
-              {c.image_url ? (
-                <img
-                  src={c.image_url}
-                  alt={c.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-brand-600 to-brand-800" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-4 text-white">
-                <div className="font-semibold text-sm sm:text-lg leading-tight">
-                  {c.name}
-                </div>
-                <div className="text-[10px] sm:text-xs text-white/80">
-                  {c.product_count} product{c.product_count === 1 ? '' : 's'}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+      <section className="max-w-7xl mx-auto px-4 py-8 sm:py-10 md:py-10">
+        <Shop />
+             
       </section>
 
       {/* -------- Trust / Stats -------- */}

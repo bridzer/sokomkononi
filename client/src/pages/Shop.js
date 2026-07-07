@@ -176,15 +176,7 @@ export default function Shop() {
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
       {/* Breadcrumb + Title */}
-      <div className="mb-4 sm:mb-6">
-        <div className="text-xs sm:text-sm text-slate-500">
-          <Link to="/" className="hover:underline">Home</Link>
-          {' / '}
-          <Link to="/shop" className="hover:underline">Shop</Link>
-          {activeCategory && (
-            <> {' / '} <span className="text-slate-700">{activeCategory.name}</span></>
-          )}
-        </div>
+      <div className="mb-4 sm:mb-6">        
         <div className="mt-1 flex items-baseline gap-3 flex-wrap">
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">{title}</h1>
           <span className="text-sm text-slate-500">
