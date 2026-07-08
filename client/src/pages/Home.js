@@ -137,12 +137,12 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-2 sm:gap-4">
             <SafeImage
               className="rounded-xl aspect-square object-cover w-full"
-              src="https://kalro.store/uploads/img-mrc9zde8-301517de0b43.jpg"
+              src="/cow.jpg"
               alt="Dairy cattle"
             />
             <SafeImage
               className="rounded-xl aspect-square object-cover w-full"
-              src="https://kalro.store/uploads/img-mrcaawft-9097585c0a09.jpg"
+              src="/dairygoat.jpg"
               alt="Dairy goats"
             />
             <SafeImage
@@ -152,7 +152,7 @@ export default function Home() {
             />
             <SafeImage
               className="rounded-xl aspect-square object-cover w-full"
-              src="https://kalro.store/uploads/img-mrcagyol-e06cb8736820.jpg"
+              src="/boargoat.jpg"
               alt="Boer goats"
             />
           </div>
