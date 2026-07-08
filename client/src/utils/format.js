@@ -149,7 +149,7 @@ const _lines = buildLines();
 
 export const BUSINESS = {
   name: envStr('REACT_APP_BUSINESS_NAME') || 'Kalro Farm Kenya',
-  location: envStr('REACT_APP_BUSINESS_LOCATION') || 'Naivasha, Kenya',
+  location: envStr('REACT_APP_BUSINESS_LOCATION') || 'Naivasha, Nakuru County, Kenya',
   email: envStr('REACT_APP_BUSINESS_EMAIL') || 'info@kalro.store',
 };
 
