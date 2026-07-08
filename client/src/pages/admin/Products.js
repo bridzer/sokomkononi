@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../api/client';
 import { formatKsh } from '../../utils/format';
+import SafeImage, { DEFAULT_FALLBACK } from '../../components/SafeImage';
 import MultiImageUpload from '../../components/MultiImageUpload';
 
 const empty = {
@@ -174,17 +175,12 @@ export default function AdminProducts() {
                     <td className="p-3">
                       <div className="flex items-center gap-3">
                         <div className="relative w-10 h-10 shrink-0">
-                          {p.image_url ? (
-                            <img
-                              src={p.image_url}
-                              alt=""
-                              className="w-10 h-10 rounded object-cover bg-slate-100"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded bg-slate-200 grid place-items-center text-slate-400 text-[10px]">
-                              n/a
-                            </div>
-                          )}
+                          <SafeImage
+                            src={p.image_url}
+                            fallback={DEFAULT_FALLBACK}
+                            alt=""
+                            className="w-10 h-10 rounded object-cover bg-slate-100"
+                          />
                           {gallerySize > 1 && (
                             <span className="absolute -bottom-1 -right-1 text-[10px] leading-none font-semibold bg-slate-900 text-white rounded-full px-1.5 py-0.5 ring-2 ring-white">
                               +{gallerySize - 1}

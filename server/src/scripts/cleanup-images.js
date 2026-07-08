@@ -11,18 +11,16 @@
  *   npm run db:cleanup:images -- --apply # actually update the DB
  */
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
 const { pool } = require('../db');
-
-const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
-const UPLOAD_PREFIX = '/uploads/';
+const {
+  UPLOAD_DIR,
+  UPLOAD_PREFIX,
+  uploadFileExists,
+} = require('../config/uploads');
 
 function urlHasFile(url) {
   if (typeof url !== 'string' || !url.startsWith(UPLOAD_PREFIX)) return true; // external — leave alone
-  const filename = url.slice(UPLOAD_PREFIX.length);
-  if (!filename) return false;
-  return fs.existsSync(path.join(UPLOAD_DIR, filename));
+  return uploadFileExists(url);
 }
 
 async function cleanProducts(apply) {

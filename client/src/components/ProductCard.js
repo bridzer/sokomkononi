@@ -4,8 +4,7 @@ import { formatKsh, orderWhatsAppMessage } from '../utils/format';
 import { useCart } from '../context/CartContext';
 import WhatsAppButton from './WhatsAppButton';
 
-const FALLBACK_IMG =
-  'https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=800&q=80';
+import SafeImage, { DEFAULT_FALLBACK } from './SafeImage';
 
 export default function ProductCard({ product }) {
   const { addItem } = useCart();
@@ -18,11 +17,11 @@ export default function ProductCard({ product }) {
         to={`/product/${product.slug}`}
         className="block relative aspect-[4/3] bg-slate-100 overflow-hidden rounded-t-xl"
       >
-        <img
-          src={product.image_url || FALLBACK_IMG}
+        <SafeImage
+          src={product.image_url}
+          fallback={DEFAULT_FALLBACK}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
         />
         {product.is_featured && (
           <span className="absolute top-2 left-2 badge bg-accent-500 text-white shadow">

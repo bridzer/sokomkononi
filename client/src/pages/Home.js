@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import StatsSection from '../components/StatsSection';
 import WhatsAppButton from '../components/WhatsAppButton';
 import PhoneButton from '../components/PhoneButton';
+import SafeImage from '../components/SafeImage';
 import { BUSINESS } from '../utils/format';
 import Shop from './Shop';
 export default function Home() {
@@ -134,29 +135,25 @@ export default function Home() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:gap-4">
-            <img
+            <SafeImage
               className="rounded-xl aspect-square object-cover w-full"
-              src="https://kalro.store/uploads/img-mrayyl13-3f306de60b73.jpg"
-              alt="Dairy Cattle"
-              loading="lazy"
+              src="https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=700&q=80"
+              alt="Dairy cattle"
             />
-            <img
+            <SafeImage
               className="rounded-xl aspect-square object-cover w-full"
-              src="https://kalro.store/uploads/img-mraztgnh-a8357f2cf480.jpg"
-              alt="Goats"
-              loading="lazy"
+              src="https://images.unsplash.com/photo-1527153816521-973f36e6d9a2?auto=format&fit=crop&w=700&q=80"
+              alt="Dairy goats"
             />
-            <img
+            <SafeImage
               className="rounded-xl aspect-square object-cover w-full"
               src="https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?auto=format&fit=crop&w=700&q=80"
               alt="Poultry"
-              loading="lazy"
             />
-            <img
+            <SafeImage
               className="rounded-xl aspect-square object-cover w-full"
-              src="https://kalro.store/uploads/img-mrayhpwf-044321efa21b.jpg"
+              src="https://images.unsplash.com/photo-1558029160-64373a5a2a57?auto=format&fit=crop&w=700&q=80"
               alt="Boer goats"
-              loading="lazy"
             />
           </div>
         </div>

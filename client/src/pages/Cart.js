@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { formatKsh } from '../utils/format';
+import SafeImage, { DEFAULT_FALLBACK } from '../components/SafeImage';
 
 export default function Cart() {
   const { items, updateQty, removeItem, total, clear } = useCart();
@@ -23,17 +24,12 @@ export default function Cart() {
         <div className="card overflow-hidden">
           {items.map((i) => (
             <div key={i.product_id} className="flex gap-4 p-4 border-b last:border-b-0 border-slate-100">
-              {i.image_url ? (
-                <img
-                  src={i.image_url}
-                  alt={i.name}
-                  className="w-24 h-24 rounded-lg object-cover bg-slate-100"
-                />
-              ) : (
-                <div className="w-24 h-24 rounded-lg bg-slate-200 grid place-items-center text-slate-400 text-xs">
-                  No image
-                </div>
-              )}
+              <SafeImage
+                src={i.image_url}
+                fallback={DEFAULT_FALLBACK}
+                alt={i.name}
+                className="w-24 h-24 rounded-lg object-cover bg-slate-100"
+              />
               <div className="flex-1">
                 <div className="font-medium text-slate-800">{i.name}</div>
                 <div className="text-sm text-slate-500">{formatKsh(i.price)} · {i.unit}</div>

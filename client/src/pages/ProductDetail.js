@@ -4,9 +4,9 @@ import api from '../api/client';
 import { formatKsh, orderWhatsAppMessage, PHONE_NUMBERS } from '../utils/format';
 import { useCart } from '../context/CartContext';
 import WhatsAppButton from '../components/WhatsAppButton';
+import SafeImage, { DEFAULT_FALLBACK } from '../components/SafeImage';
 
-const FALLBACK_IMG =
-  'https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=1000&q=80';
+const FALLBACK_IMG = DEFAULT_FALLBACK;
 
 // Merge legacy image_url + gallery into a single ordered list of URLs, keeping
 // the cover first and removing duplicates. Falls back to a stock image so the
@@ -85,9 +85,10 @@ export default function ProductDetail() {
         {/* --- Gallery --- */}
         <div>
           <div className="rounded-xl overflow-hidden bg-slate-100 aspect-[4/3] relative group">
-            <img
+            <SafeImage
               key={activeImage}
               src={activeImage}
+              fallback={FALLBACK_IMG}
               alt={product.name}
               className="w-full h-full object-cover"
             />
@@ -139,7 +140,7 @@ export default function ProductDetail() {
                         : 'opacity-70 hover:opacity-100 ring-1 ring-slate-200'
                     }`}
                   >
-                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <SafeImage src={url} fallback={FALLBACK_IMG} alt="" className="w-full h-full object-cover" />
                   </button>
                 );
               })}

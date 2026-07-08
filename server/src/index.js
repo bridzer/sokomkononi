@@ -8,6 +8,13 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 
 const { pool } = require('./db');
+const {
+  UPLOAD_DIR,
+  PLACEHOLDER_PATH,
+  ensureUploadDir,
+  resolveUploadFilename,
+  countUploadFiles,
+} = require('./config/uploads');
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
 const categoryRoutes = require('./routes/categories');
@@ -43,14 +50,30 @@ app.use(cors({ origin: corsOrigin, credentials: true }));
 app.use(express.json({ limit: '2mb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'tiny' : 'dev'));
 
-// Serve uploaded images
-app.use(
-  '/uploads',
-  express.static(path.join(__dirname, '..', 'uploads'), {
-    maxAge: '7d',
-    fallthrough: false,
-  })
-);
+// Serve uploaded images — missing files get a placeholder (not a JSON ENOENT error).
+ensureUploadDir();
+app.use('/uploads', (req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+
+  const filename = resolveUploadFilename(req.path);
+  if (!filename) return res.status(400).json({ error: 'Invalid upload path' });
+
+  const filePath = path.join(UPLOAD_DIR, filename);
+  if (fs.existsSync(filePath)) {
+    res.set('Cache-Control', 'public, max-age=604800, immutable');
+    return res.sendFile(filePath, (err) => {
+      if (err) next(err);
+    });
+  }
+
+  // File referenced in DB but not on disk (common after Railway redeploy without a Volume).
+  console.warn(`[uploads] Missing file "${filename}" — serving placeholder`);
+  res.set('Cache-Control', 'no-store');
+  if (fs.existsSync(PLACEHOLDER_PATH)) {
+    return res.type('image/svg+xml').sendFile(PLACEHOLDER_PATH);
+  }
+  return res.status(404).end();
+});
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -118,12 +141,28 @@ async function ensureSchema() {
   }
 }
 
-const PORT = process.env.PORT || 5000;
-ensureSchema().finally(() => {
-  app.listen(PORT, () => {
-    console.log(
-      `Kalro Farm ${clientBuildExists ? 'app' : 'API'} listening on port ${PORT}` +
-        (process.env.NODE_ENV === 'production' ? ' (production)' : '')
+function logUploadsHealth() {
+  const count = countUploadFiles();
+  console.log(`[uploads] Directory: ${UPLOAD_DIR} (${count} file(s))`);
+  if (process.env.NODE_ENV === 'production' && count === 0) {
+    console.warn(
+      '[uploads] Upload folder is empty on production.\n' +
+        '         Mount a Railway Volume at /app/server/uploads and re-upload product images,\n' +
+        '         or run: railway run npm run db:cleanup:images -- --apply'
     );
+  }
+}
+
+const PORT = process.env.PORT || 5000;
+ensureSchema()
+  .finally(() => {
+    logUploadsHealth();
+  })
+  .finally(() => {
+    app.listen(PORT, () => {
+      console.log(
+        `Kalro Farm ${clientBuildExists ? 'app' : 'API'} listening on port ${PORT}` +
+          (process.env.NODE_ENV === 'production' ? ' (production)' : '')
+      );
+    });
   });
-});
