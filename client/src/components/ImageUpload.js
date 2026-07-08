@@ -56,21 +56,21 @@ export default function ImageUpload({ value, onChange, label = 'Image' }) {
   return (
     <div>
       {label && <label className="label">{label}</label>}
-      <div className="flex items-start gap-4">
-        <div className="w-28 h-28 shrink-0 rounded-lg border border-dashed border-slate-300 bg-slate-50 grid place-items-center overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+        <div className="w-full sm:w-28 h-36 sm:h-28 shrink-0 rounded-lg border border-dashed border-slate-300 bg-slate-50 grid place-items-center overflow-hidden mx-auto sm:mx-0">
           {value ? (
             <img src={value} alt="preview" className="w-full h-full object-cover" />
           ) : (
             <span className="text-xs text-slate-400 text-center px-2">No image</span>
           )}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap gap-2">
+        <div className="flex-1 min-w-0 w-full">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
             <button
               type="button"
               onClick={pick}
               disabled={uploading}
-              className="btn-outline text-sm py-1.5"
+              className="btn-outline text-sm py-2 w-full sm:w-auto"
             >
               {uploading ? 'Uploading…' : value ? 'Replace image' : 'Upload image'}
             </button>
@@ -79,7 +79,7 @@ export default function ImageUpload({ value, onChange, label = 'Image' }) {
                 type="button"
                 onClick={clear}
                 disabled={uploading}
-                className="btn-ghost text-sm py-1.5 text-red-600 hover:bg-red-50"
+                className="btn-ghost text-sm py-2 text-red-600 hover:bg-red-50 w-full sm:w-auto"
               >
                 Remove
               </button>

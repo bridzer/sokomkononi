@@ -39,24 +39,30 @@ export default function AdminMessages() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-800 mb-4">Messages</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-slate-800 mb-4">Messages</h1>
       <div className="space-y-3">
-        {loading && <div className="text-slate-500">Loading…</div>}
+        {loading && <div className="text-slate-500 text-center py-8">Loading…</div>}
         {!loading && messages.length === 0 && (
           <div className="card p-6 text-slate-500 text-center">No messages yet.</div>
         )}
         {messages.map((m) => (
-          <div key={m.id} className={`card p-5 ${!m.is_read ? 'border-l-4 border-brand-500' : ''}`}>
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
+          <div
+            key={m.id}
+            className={`card p-4 sm:p-5 ${!m.is_read ? 'border-l-4 border-brand-500' : ''}`}
+          >
+            <div className="flex flex-col gap-3">
+              <div className="min-w-0">
                 <div className="font-semibold text-slate-800">{m.name}</div>
-                <div className="text-xs text-slate-500">
-                  {m.phone && <span>{m.phone} · </span>}
-                  {m.email && <span>{m.email} · </span>}
+                <div className="text-xs text-slate-500 mt-1 break-words">
+                  {m.phone && <span>{m.phone}</span>}
+                  {m.phone && m.email && <span> · </span>}
+                  {m.email && <span>{m.email}</span>}
+                  {(m.phone || m.email) && <span> · </span>}
                   <span>{new Date(m.created_at).toLocaleString()}</span>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                 {(() => {
                   const to = normalizeKenyanPhone(m.phone);
                   return to ? (
@@ -67,24 +73,35 @@ export default function AdminMessages() {
                       )}
                       target="_blank"
                       rel="noreferrer"
-                      className="btn-whatsapp text-xs py-1 px-3"
+                      className="btn-whatsapp text-sm py-2 px-4 w-full sm:w-auto justify-center"
                     >
                       WhatsApp
                     </a>
                   ) : null;
                 })()}
                 {!m.is_read && (
-                  <button className="btn-ghost text-xs py-1" onClick={() => markRead(m.id)}>
+                  <button
+                    type="button"
+                    className="btn-outline text-sm py-2 px-4 w-full sm:w-auto"
+                    onClick={() => markRead(m.id)}
+                  >
                     Mark read
                   </button>
                 )}
-                <button className="text-red-600 text-xs hover:underline" onClick={() => remove(m.id)}>
+                <button
+                  type="button"
+                  className="btn-ghost text-sm py-2 px-4 text-red-600 hover:bg-red-50 w-full sm:w-auto"
+                  onClick={() => remove(m.id)}
+                >
                   Delete
                 </button>
               </div>
             </div>
-            {m.subject && <div className="mt-2 font-medium">{m.subject}</div>}
-            <div className="mt-1 text-slate-700 whitespace-pre-line">{m.message}</div>
+
+            {m.subject && <div className="mt-3 font-medium text-slate-800">{m.subject}</div>}
+            <div className="mt-2 text-sm sm:text-base text-slate-700 whitespace-pre-line break-words">
+              {m.message}
+            </div>
           </div>
         ))}
       </div>

@@ -50,75 +50,124 @@ export default function AdminCategories() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-slate-800">Categories</h1>
-        <button className="btn-primary" onClick={() => setEditing({ ...empty })}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Categories</h1>
+        <button
+          className="btn-primary w-full sm:w-auto shrink-0"
+          onClick={() => setEditing({ ...empty })}
+        >
           + New category
         </button>
       </div>
 
       <div className="card overflow-hidden">
         {loading ? (
-          <div className="p-6 text-slate-500">Loading…</div>
+          <div className="p-6 text-slate-500 text-center">Loading…</div>
+        ) : categories.length === 0 ? (
+          <div className="p-8 text-center text-slate-500">No categories yet.</div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
-              <tr>
-                <th className="p-3 text-left">Name</th>
-                <th className="p-3 text-left">Slug</th>
-                <th className="p-3 text-left">Description</th>
-                <th className="p-3 text-center">Active</th>
-                <th className="p-3 text-center">Sort</th>
-                <th className="p-3"></th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Mobile cards */}
+            <div className="md:hidden divide-y divide-slate-100">
               {categories.map((c) => (
-                <tr key={c.id} className="border-t border-slate-100">
-                  <td className="p-3 font-medium text-slate-800">{c.name}</td>
-                  <td className="p-3 text-slate-500">{c.slug}</td>
-                  <td className="p-3 text-slate-600 max-w-md truncate">{c.description}</td>
-                  <td className="p-3 text-center">
-                    {c.is_active ? (
-                      <span className="badge bg-green-100 text-green-800">Active</span>
-                    ) : (
-                      <span className="badge bg-slate-100 text-slate-700">Hidden</span>
-                    )}
-                  </td>
-                  <td className="p-3 text-center">{c.sort_order}</td>
-                  <td className="p-3 text-right">
-                    <button className="text-brand-700 hover:underline mr-3" onClick={() => setEditing(c)}>
+                <div key={c.id} className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-800">{c.name}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">{c.slug}</div>
+                      {c.description && (
+                        <p className="text-sm text-slate-600 mt-2 line-clamp-2">{c.description}</p>
+                      )}
+                    </div>
+                    <div className="shrink-0 text-center">
+                      {c.is_active ? (
+                        <span className="badge bg-green-100 text-green-800">Active</span>
+                      ) : (
+                        <span className="badge bg-slate-100 text-slate-700">Hidden</span>
+                      )}
+                      <div className="text-xs text-slate-400 mt-1">Sort: {c.sort_order}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      className="btn-outline flex-1 text-sm py-2"
+                      onClick={() => setEditing(c)}
+                    >
                       Edit
                     </button>
-                    <button className="text-red-600 hover:underline" onClick={() => remove(c.id)}>
+                    <button
+                      type="button"
+                      className="btn-ghost flex-1 text-sm py-2 text-red-600 hover:bg-red-50"
+                      onClick={() => remove(c.id)}
+                    >
                       Delete
                     </button>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-              {categories.length === 0 && (
-                <tr>
-                  <td colSpan="6" className="p-8 text-center text-slate-500">
-                    No categories yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
+                  <tr>
+                    <th className="p-3 text-left">Name</th>
+                    <th className="p-3 text-left">Slug</th>
+                    <th className="p-3 text-left">Description</th>
+                    <th className="p-3 text-center">Active</th>
+                    <th className="p-3 text-center">Sort</th>
+                    <th className="p-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {categories.map((c) => (
+                    <tr key={c.id} className="border-t border-slate-100">
+                      <td className="p-3 font-medium text-slate-800">{c.name}</td>
+                      <td className="p-3 text-slate-500">{c.slug}</td>
+                      <td className="p-3 text-slate-600 max-w-md truncate">{c.description}</td>
+                      <td className="p-3 text-center">
+                        {c.is_active ? (
+                          <span className="badge bg-green-100 text-green-800">Active</span>
+                        ) : (
+                          <span className="badge bg-slate-100 text-slate-700">Hidden</span>
+                        )}
+                      </td>
+                      <td className="p-3 text-center">{c.sort_order}</td>
+                      <td className="p-3 text-right whitespace-nowrap">
+                        <button className="text-brand-700 hover:underline mr-3" onClick={() => setEditing(c)}>
+                          Edit
+                        </button>
+                        <button className="text-red-600 hover:underline" onClick={() => remove(c.id)}>
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
       {editing && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-start justify-center sm:p-4 overflow-y-auto">
           <form
             onSubmit={save}
-            className="bg-white rounded-xl w-full max-w-lg p-6 my-8 space-y-4"
+            className="bg-white rounded-t-2xl sm:rounded-xl w-full max-w-lg p-4 sm:p-6 sm:my-8 max-h-[92vh] overflow-y-auto space-y-4"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="text-lg font-semibold">
                 {editing.id ? 'Edit category' : 'New category'}
               </h2>
-              <button type="button" onClick={() => setEditing(null)} className="text-slate-500 hover:text-slate-800">
+              <button
+                type="button"
+                onClick={() => setEditing(null)}
+                className="p-2 -mr-2 text-slate-500 hover:text-slate-800"
+                aria-label="Close"
+              >
                 ✕
               </button>
             </div>
@@ -145,7 +194,7 @@ export default function AdminCategories() {
               value={editing.image_url || ''}
               onChange={(url) => setEditing({ ...editing, image_url: url })}
             />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="label">Sort order</label>
                 <input
@@ -155,7 +204,7 @@ export default function AdminCategories() {
                   onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })}
                 />
               </div>
-              <label className="flex items-end gap-2 text-sm pb-2">
+              <label className="flex items-center gap-2 text-sm pt-0 sm:pt-6">
                 <input
                   type="checkbox"
                   checked={!!editing.is_active}
@@ -164,11 +213,11 @@ export default function AdminCategories() {
                 Active
               </label>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" className="btn-ghost" onClick={() => setEditing(null)}>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2 border-t border-slate-100 sm:border-0">
+              <button type="button" className="btn-ghost w-full sm:w-auto py-2.5" onClick={() => setEditing(null)}>
                 Cancel
               </button>
-              <button type="submit" className="btn-primary">
+              <button type="submit" className="btn-primary w-full sm:w-auto py-2.5">
                 Save category
               </button>
             </div>

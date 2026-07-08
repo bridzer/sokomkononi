@@ -29,20 +29,23 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-brand-800 grid place-items-center px-4">
+    <div
+      className="min-h-screen bg-brand-800 grid place-items-center px-4 py-8"
+      style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
+    >
       <div className="w-full max-w-md">
-        <div className="text-center mb-6">
-          <span className="mx-auto w-16 h-16 rounded-full bg-white grid place-items-center overflow-hidden ring-4 ring-white/10 shadow-lg">
+        <div className="text-center mb-5 sm:mb-6">
+          <span className="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white grid place-items-center overflow-hidden ring-4 ring-white/10 shadow-lg">
             <img
               src="/kalro-logo.png"
               alt="Kalro Farm Kenya logo"
               className="w-full h-full object-cover"
             />
           </span>
-          <h1 className="text-white text-2xl font-bold mt-3">Kalro Farm Admin</h1>
+          <h1 className="text-white text-xl sm:text-2xl font-bold mt-3">Kalro Farm Admin</h1>
           <p className="text-brand-200 text-sm">Sign in to manage the store</p>
         </div>
-        <form onSubmit={onSubmit} className="card p-6 space-y-4">
+        <form onSubmit={onSubmit} className="card p-5 sm:p-6 space-y-4">
           <div>
             <label className="label">Email</label>
             <input
@@ -63,7 +66,7 @@ export default function AdminLogin() {
               required
             />
           </div>
-          <button type="submit" className="btn-primary w-full" disabled={submitting}>
+          <button type="submit" className="btn-primary w-full py-2.5" disabled={submitting}>
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
           <div className="text-xs text-slate-500 text-center">

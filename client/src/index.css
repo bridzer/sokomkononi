@@ -54,6 +54,11 @@ main { padding-bottom: env(safe-area-inset-bottom, 0px); }
   .badge {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium;
   }
+  /* Admin: bottom-sheet modals on small screens */
+  .admin-modal {
+    @apply bg-white w-full max-h-[92vh] overflow-y-auto
+           rounded-t-2xl sm:rounded-xl p-4 sm:p-6 sm:my-8;
+  }
 }
 
 @layer utilities {

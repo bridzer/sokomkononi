@@ -128,34 +128,102 @@ export default function AdminProducts() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-3 justify-between mb-4">
-        <h1 className="text-2xl font-bold text-slate-800">Products</h1>
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:justify-between mb-4">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Products</h1>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               load();
             }}
-            className="flex gap-2"
+            className="flex gap-2 w-full sm:w-auto"
           >
             <input
-              className="input w-64"
+              className="input flex-1 sm:w-48 md:w-64 min-w-0"
               placeholder="Search…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button className="btn-ghost" type="submit">Search</button>
+            <button className="btn-ghost shrink-0" type="submit">Search</button>
           </form>
-          <button className="btn-primary" onClick={openNew}>+ New product</button>
+          <button className="btn-primary w-full sm:w-auto shrink-0" onClick={openNew}>
+            + New product
+          </button>
         </div>
       </div>
 
       <div className="card overflow-hidden">
         {loading ? (
-          <div className="p-6 text-slate-500">Loading…</div>
+          <div className="p-6 text-slate-500 text-center">Loading…</div>
+        ) : products.length === 0 ? (
+          <div className="p-8 text-center text-slate-500">No products found.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <>
+            {/* Mobile card list */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {products.map((p) => {
+                const gallerySize = Array.isArray(p.images) ? p.images.length : 0;
+                return (
+                  <div key={p.id} className="p-4">
+                    <div className="flex gap-3">
+                      <div className="relative w-14 h-14 shrink-0">
+                        <SafeImage
+                          src={p.image_url}
+                          fallback={DEFAULT_FALLBACK}
+                          alt=""
+                          className="w-14 h-14 rounded-lg object-cover bg-slate-100"
+                        />
+                        {gallerySize > 1 && (
+                          <span className="absolute -bottom-1 -right-1 text-[10px] leading-none font-semibold bg-slate-900 text-white rounded-full px-1.5 py-0.5 ring-2 ring-white">
+                            +{gallerySize - 1}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-slate-800 leading-tight">{p.name}</div>
+                        {p.breed && <div className="text-xs text-slate-500 mt-0.5">{p.breed}</div>}
+                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
+                          <span>{p.category_name || 'Uncategorised'}</span>
+                          {p.age_stage && <span>· {p.age_stage}</span>}
+                          <span>· Stock: {p.stock}</span>
+                        </div>
+                        <div className="mt-1 font-bold text-brand-700">{formatKsh(p.price)}</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {p.is_active ? (
+                        <span className="badge bg-green-100 text-green-800">Active</span>
+                      ) : (
+                        <span className="badge bg-slate-100 text-slate-700">Hidden</span>
+                      )}
+                      {p.is_featured && (
+                        <span className="badge bg-accent-500 text-white">Featured</span>
+                      )}
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        className="btn-outline flex-1 text-sm py-2"
+                        onClick={() => openEdit(p)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost flex-1 text-sm py-2 text-red-600 hover:bg-red-50"
+                        onClick={() => remove(p.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
               <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
                 <tr>
                   <th className="p-3 text-left">Product</th>
@@ -230,20 +298,26 @@ export default function AdminProducts() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
 
       {editing && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-start justify-center sm:p-4 overflow-y-auto">
           <form
             onSubmit={save}
-            className="bg-white rounded-xl w-full max-w-2xl p-6 my-8 space-y-4"
+            className="bg-white rounded-t-2xl sm:rounded-xl w-full max-w-2xl p-4 sm:p-6 sm:my-8 max-h-[92vh] sm:max-h-none overflow-y-auto space-y-4"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="text-lg font-semibold">
                 {editing.id ? 'Edit product' : 'New product'}
               </h2>
-              <button type="button" onClick={close} className="text-slate-500 hover:text-slate-800">
+              <button
+                type="button"
+                onClick={close}
+                className="p-2 -mr-2 text-slate-500 hover:text-slate-800"
+                aria-label="Close"
+              >
                 ✕
               </button>
             </div>
@@ -349,9 +423,13 @@ export default function AdminProducts() {
                 Featured on home page
               </label>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" className="btn-ghost" onClick={close}>Cancel</button>
-              <button type="submit" className="btn-primary">Save product</button>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2 border-t border-slate-100 sm:border-0">
+              <button type="button" className="btn-ghost w-full sm:w-auto py-2.5" onClick={close}>
+                Cancel
+              </button>
+              <button type="submit" className="btn-primary w-full sm:w-auto py-2.5">
+                Save product
+              </button>
             </div>
           </form>
         </div>
