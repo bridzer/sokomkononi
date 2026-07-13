@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../api/client';
-import ProductCard from '../components/ProductCard';
+import ProductListingGrid from '../components/ProductListingGrid';
 import { categoryIcon } from '../utils/categoryIcon';
 import { copyText } from '../utils/format';
 
@@ -304,40 +304,26 @@ export default function Shop() {
         </div>
       </div>
 
-      {/* -------- Product grid -------- */}
-      {loading ? (
-        <div className="grid gap-3 sm:gap-5 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="card animate-pulse">
-              <div className="aspect-[4/3] bg-slate-100 rounded-t-xl" />
-              <div className="p-4 space-y-2">
-                <div className="h-3 w-1/2 bg-slate-100 rounded" />
-                <div className="h-4 w-3/4 bg-slate-100 rounded" />
-                <div className="h-5 w-1/3 bg-slate-100 rounded mt-2" />
-              </div>
+      {/* -------- Product grid (native ads injected automatically every 10 products) -------- */}
+      <ProductListingGrid
+        products={products}
+        loading={loading}
+        adContext={{ categorySlug, search }}
+        emptyState={
+          <div className="card p-10 text-center">
+            <div className="text-4xl mb-2" aria-hidden="true">🔍</div>
+            <div className="text-slate-700 font-semibold">No products found</div>
+            <div className="text-sm text-slate-500 mt-1">
+              Try a different category or clear your search.
             </div>
-          ))}
-        </div>
-      ) : products.length === 0 ? (
-        <div className="card p-10 text-center">
-          <div className="text-4xl mb-2" aria-hidden="true">🔍</div>
-          <div className="text-slate-700 font-semibold">No products found</div>
-          <div className="text-sm text-slate-500 mt-1">
-            Try a different category or clear your search.
+            {hasActiveFilters && (
+              <button onClick={reset} className="btn-outline mt-4 text-sm">
+                Reset filters
+              </button>
+            )}
           </div>
-          {hasActiveFilters && (
-            <button onClick={reset} className="btn-outline mt-4 text-sm">
-              Reset filters
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {products.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
-      )}
+        }
+      />
     </div>
   );
 }

@@ -56,7 +56,6 @@ export default function AdminLayout() {
           </span>
           <div className="min-w-0 flex-1">
             <div className="font-bold leading-tight text-sm sm:text-base">Kalro Admin</div>
-            <div className="text-[11px] text-brand-200 truncate">{user?.email}</div>
           </div>
           <button
             type="button"

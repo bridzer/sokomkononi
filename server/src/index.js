@@ -27,10 +27,43 @@ const errorHandler = require('./middleware/error');
 const app = express();
 app.set('trust proxy', 1); // required behind Railway/Nginx for correct client IP + rate limiting
 
+// Content-Security-Policy — allows AdSense native ads + Google Maps embed on the homepage.
+// Set ENABLE_CSP=false to disable (useful for local debugging only).
+const enableCsp = process.env.ENABLE_CSP !== 'false';
+const cspDirectives = {
+  defaultSrc: ["'self'"],
+  scriptSrc: [
+    "'self'",
+    'https://pagead2.googlesyndication.com',
+    'https://www.googletagservices.com',
+    'https://*.adtrafficquality.google',
+  ],
+  frameSrc: [
+    "'self'",
+    'https://googleads.g.doubleclick.net',
+    'https://tpc.googlesyndication.com',
+    'https://www.google.com',
+    'https://maps.google.com',
+  ],
+  imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+  connectSrc: [
+    "'self'",
+    'https://pagead2.googlesyndication.com',
+    'https://googleads.g.doubleclick.net',
+    'https://*.google.com',
+  ],
+  styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+  fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+  objectSrc: ["'none'"],
+  baseUri: ["'self'"],
+  formAction: ["'self'"],
+  frameAncestors: ["'self'"],
+};
+
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: enableCsp ? { directives: cspDirectives } : false,
   })
 );
 
@@ -109,7 +142,17 @@ const CLIENT_BUILD = path.join(__dirname, '..', '..', 'client', 'build');
 const clientBuildExists = fs.existsSync(path.join(CLIENT_BUILD, 'index.html'));
 
 if (clientBuildExists) {
-  app.use(express.static(CLIENT_BUILD, { maxAge: '1d' }));
+  // Long cache for hashed static assets; HTML is served without immutable cache below.
+  app.use(
+    express.static(CLIENT_BUILD, {
+      maxAge: '1d',
+      setHeaders(res, filePath) {
+        if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache');
+        }
+      },
+    })
+  );
   // SPA fallback: any non-/api, non-/uploads GET request returns index.html
   app.get(/^\/(?!api\/|uploads\/).*/, (_req, res) => {
     res.sendFile(path.join(CLIENT_BUILD, 'index.html'));
