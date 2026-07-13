@@ -52,12 +52,12 @@ export default function Footer() {
             <div>
               <div className="text-white font-bold text-lg leading-tight">Kalro Farm</div>
               <div className="text-[10px] uppercase tracking-[0.2em] text-brand-200/80">
-                Kenya · Naivasha
+                Kenya · Nakuru . Naivasha
               </div>
             </div>
           </div>
           <p className="mt-3 text-sm text-brand-200 leading-relaxed">
-            Healthy dairy cattle,  &amp; boer goats, poultry and farm-fresh eggs.
+            Healthy dairy cattle,  &amp; boer goats, poultry and farm products.
             Vaccinated, disease-free stock delivered countrywide.
           </p>
         </div>
@@ -66,8 +66,8 @@ export default function Footer() {
           <h4 className="text-white font-semibold mb-3 text-sm uppercase tracking-wider">Shop</h4>
           <ul className="space-y-2 text-sm">
             <li><Link to="/shop/cattle" className="hover:text-white transition-colors">Dairy Cattle</Link></li>
-            <li><Link to="/shop/dairy-goats" className="hover:text-white transition-colors">Dairy Goats</Link></li>
-            <li><Link to="/shop/boer-goats" className="hover:text-white transition-colors">Boer Goats</Link></li>
+            <li><Link to="/shop/goats" className="hover:text-white transition-colors">Dairy Goats</Link></li>
+            <li><Link to="/shop/goats" className="hover:text-white transition-colors">Boer Goats</Link></li>
             <li><Link to="/shop/poultry" className="hover:text-white transition-colors">Poultry</Link></li>
             <li><Link to="/shop/eggs" className="hover:text-white transition-colors">Eggs</Link></li>
           </ul>
