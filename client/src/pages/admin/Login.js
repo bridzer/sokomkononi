@@ -68,11 +68,7 @@ export default function AdminLogin() {
           </div>
           <button type="submit" className="btn-primary w-full py-2.5" disabled={submitting}>
             {submitting ? 'Signing in…' : 'Sign in'}
-          </button>
-          <div className="text-xs text-slate-500 text-center">
-            Default seed credentials: <br />
-            <code>admin@kalrofarm.co.ke / Admin@1234</code>
-          </div>
+          </button>          
         </form>
       </div>
     </div>
