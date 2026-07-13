@@ -1,6 +1,8 @@
 // -----------------------------------------------------------------------------
 // Business + contact configuration
 // -----------------------------------------------------------------------------
+import { formatProductPrice } from './pricing';
+
 // Numbers are pulled from environment variables so an admin can update them
 // without touching source code. Only variables prefixed with REACT_APP_ are
 // exposed to the React bundle by Create React App.
@@ -209,6 +211,8 @@ export function formatKsh(amount) {
   return `KSh ${n.toLocaleString('en-KE', { maximumFractionDigits: 0 })}`;
 }
 
+export { formatProductPrice, isRangePrice } from './pricing';
+
 /**
  * Normalize a Kenyan phone number to wa.me format (e.g. "254712345678").
  * Accepts inputs like "0712345678", "+254712345678", "254712345678",
@@ -230,10 +234,11 @@ export function whatsappUrl(text, number) {
 }
 
 export function orderWhatsAppMessage(product) {
+  const priceText = formatProductPrice(product);
   return (
     `Hello ${BUSINESS.name}, I'm interested in *${product.name}*` +
     (product.age_stage ? ` (${product.age_stage})` : '') +
-    ` priced at KSh ${Number(product.price).toLocaleString()}. Please share more details.`
+    ` priced at ${priceText}. Please share more details.`
   );
 }
 
@@ -241,12 +246,15 @@ export function cartWhatsAppMessage(items, total, customer) {
   const lines = [
     `Hello ${BUSINESS.name}, I'd like to place an order:`,
     '',
-    ...items.map(
-      (i) =>
-        `- ${i.name} x${i.quantity} @ KSh ${Number(i.price).toLocaleString()} = KSh ${(
-          i.price * i.quantity
-        ).toLocaleString()}`
-    ),
+    ...items.map((i) => {
+      const priceLabel =
+        i.price_type === 'range' && i.price_max
+          ? `KSh ${Number(i.price).toLocaleString()} – KSh ${Number(i.price_max).toLocaleString()} (est. from min)`
+          : `KSh ${Number(i.price).toLocaleString()}`;
+      return `- ${i.name} x${i.quantity} @ ${priceLabel} = KSh ${(
+        i.price * i.quantity
+      ).toLocaleString()}`;
+    }),
     '',
     `Total: KSh ${Number(total).toLocaleString()}`,
   ];

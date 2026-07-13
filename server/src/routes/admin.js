@@ -16,10 +16,19 @@ router.use(requireAdmin);
 router.post('/uploads', (req, res, next) => {
   upload.single('image')(req, res, (err) => {
     if (err) {
-      console.warn('[upload:single] rejected:', err.message);
+      console.warn('[upload:single] rejected:', err.code || err.message, {
+        contentType: req.headers['content-type'],
+        userAgent: req.headers['user-agent'],
+      });
       return next(err);
     }
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    if (!req.file) {
+      console.warn('[upload:single] no file in request', {
+        contentType: req.headers['content-type'],
+        bodyKeys: Object.keys(req.body || {}),
+      });
+      return res.status(400).json({ error: 'No file uploaded — use field name "image"' });
+    }
     const url = `/uploads/${req.file.filename}`;
     console.log(`[upload:single] ${req.file.filename} (${req.file.size} bytes)`);
     res.status(201).json({
@@ -35,11 +44,19 @@ router.post('/uploads', (req, res, next) => {
 router.post('/uploads/batch', (req, res, next) => {
   upload.array('images', 10)(req, res, (err) => {
     if (err) {
-      console.warn('[upload:batch] rejected:', err.message);
+      console.warn('[upload:batch] rejected:', err.code || err.message, {
+        contentType: req.headers['content-type'],
+        userAgent: req.headers['user-agent'],
+      });
       return next(err);
     }
     const files = req.files || [];
-    if (!files.length) return res.status(400).json({ error: 'No files uploaded' });
+    if (!files.length) {
+      console.warn('[upload:batch] no files in request', {
+        contentType: req.headers['content-type'],
+      });
+      return res.status(400).json({ error: 'No files uploaded — use field name "images"' });
+    }
     console.log(
       `[upload:batch] ${files.length} file(s):`,
       files.map((f) => f.filename).join(', ')
@@ -68,6 +85,8 @@ router.delete('/uploads/:filename', (req, res) => {
     res.json({ success: true });
   });
 });
+
+const { normalizeProductPricing } = require('../utils/pricing');
 
 function slugify(text) {
   return String(text || '')
@@ -213,23 +232,21 @@ function normalizeImages(input) {
 router.post('/products', async (req, res, next) => {
   try {
     const {
-      category_id, name, description, breed, age_stage, unit, price,
+      category_id, name, description, breed, age_stage, unit,
       stock, image_url, images: imagesInput, is_active, is_featured,
     } = req.body || {};
 
-    console.log('[products:create] received', {
-      name,
-      image_url: image_url ?? null,
-      imagesReceived: Array.isArray(imagesInput),
-      imagesCount: Array.isArray(imagesInput) ? imagesInput.length : 'n/a',
-    });
-
-    if (!name || price === undefined) {
-      return res.status(400).json({ error: 'name and price are required' });
+    if (!name) {
+      return res.status(400).json({ error: 'Product name is required' });
     }
 
-    // When `images` is provided, it wins and cover is derived from images[0].
-    // Otherwise fall back to a legacy single `image_url`.
+    let pricing;
+    try {
+      pricing = normalizeProductPricing(req.body);
+    } catch (err) {
+      return res.status(err.status || 400).json({ error: err.message });
+    }
+
     const { images: imgs, cover } = normalizeImages(imagesInput);
     const finalImages = imgs || (image_url ? [image_url] : []);
     const finalCover = cover || image_url || null;
@@ -241,14 +258,15 @@ router.post('/products', async (req, res, next) => {
     const slug = uniqCheck.rows[0].c > 0 ? `${baseSlug}-${Date.now().toString().slice(-5)}` : baseSlug;
     const r = await query(
       `INSERT INTO products
-        (category_id, name, slug, description, breed, age_stage, unit, price,
+        (category_id, name, slug, description, breed, age_stage, unit, price, price_type, price_max,
          stock, image_url, images, is_active, is_featured)
-       VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,'each'),$8,COALESCE($9,0),$10,$11::jsonb,
-               COALESCE($12,TRUE),COALESCE($13,FALSE))
+       VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,'each'),$8,$9,$10,COALESCE($11,0),$12,$13::jsonb,
+               COALESCE($14,TRUE),COALESCE($15,FALSE))
        RETURNING *`,
       [
         category_id || null, name, slug, description || null, breed || null, age_stage || null,
-        unit, price, stock, finalCover, JSON.stringify(finalImages), is_active, is_featured,
+        unit, pricing.price, pricing.price_type, pricing.price_max, stock, finalCover,
+        JSON.stringify(finalImages), is_active, is_featured,
       ]
     );
     res.status(201).json({ product: r.rows[0] });
@@ -260,22 +278,25 @@ router.post('/products', async (req, res, next) => {
 router.put('/products/:id', async (req, res, next) => {
   try {
     const {
-      category_id, name, description, breed, age_stage, unit, price,
+      category_id, name, description, breed, age_stage, unit,
       stock, image_url, images: imagesInput, is_active, is_featured,
+      price_type,
     } = req.body || {};
 
-    console.log('[products:update] received', {
-      id: req.params.id,
-      image_url: image_url ?? null,
-      imagesReceived: Array.isArray(imagesInput),
-      imagesCount: Array.isArray(imagesInput) ? imagesInput.length : 'n/a',
-    });
+    const hasPricingUpdate =
+      req.body?.price !== undefined ||
+      req.body?.price_max !== undefined ||
+      price_type !== undefined;
 
-    // If the caller sent an `images` array we update BOTH the gallery and the
-    // cover column (keeping them in sync). When the caller explicitly clears
-    // the gallery (images = []) we need to force image_url to null too, which
-    // COALESCE alone can't express. The CASE below picks between "force" and
-    // "coalesce" modes using the boolean $10.
+    let pricing = null;
+    if (hasPricingUpdate) {
+      try {
+        pricing = normalizeProductPricing(req.body);
+      } catch (err) {
+        return res.status(err.status || 400).json({ error: err.message });
+      }
+    }
+
     const hasImagesUpdate = Array.isArray(imagesInput);
     const { images: imgs, cover } = normalizeImages(imagesInput);
     const nextCover = hasImagesUpdate ? cover : (image_url ?? null);
@@ -290,15 +311,29 @@ router.put('/products/:id', async (req, res, next) => {
         age_stage = COALESCE($5, age_stage),
         unit = COALESCE($6, unit),
         price = COALESCE($7, price),
-        stock = COALESCE($8, stock),
-        image_url = CASE WHEN $10::boolean THEN $9 ELSE COALESCE($9, image_url) END,
-        images = COALESCE($11::jsonb, images),
-        is_active = COALESCE($12, is_active),
-        is_featured = COALESCE($13, is_featured),
+        price_type = COALESCE($8, price_type),
+        price_max = CASE WHEN $9::boolean THEN $10 ELSE price_max END,
+        stock = COALESCE($11, stock),
+        image_url = CASE WHEN $13::boolean THEN $12 ELSE COALESCE($12, image_url) END,
+        images = COALESCE($14::jsonb, images),
+        is_active = COALESCE($15, is_active),
+        is_featured = COALESCE($16, is_featured),
         updated_at = NOW()
-       WHERE id=$14 RETURNING *`,
-      [category_id, name, description, breed, age_stage, unit, price, stock,
-       nextCover, hasImagesUpdate, nextImages, is_active, is_featured, req.params.id]
+       WHERE id=$17 RETURNING *`,
+      [
+        category_id, name, description, breed, age_stage, unit,
+        pricing?.price ?? null,
+        pricing?.price_type ?? null,
+        hasPricingUpdate,
+        pricing?.price_max ?? null,
+        stock,
+        nextCover,
+        hasImagesUpdate,
+        nextImages,
+        is_active,
+        is_featured,
+        req.params.id,
+      ]
     );
     if (!r.rowCount) return res.status(404).json({ error: 'Product not found' });
     res.json({ product: r.rows[0] });

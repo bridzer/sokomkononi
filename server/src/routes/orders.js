@@ -42,7 +42,7 @@ router.post('/', async (req, res, next) => {
     const orderNumber = genOrderNumber();
     const productIds = items.map((i) => Number(i.product_id));
     const productsRes = await client.query(
-      `SELECT id, name, price, stock, is_active FROM products WHERE id = ANY($1::int[])`,
+      `SELECT id, name, price, price_type, price_max, stock, is_active FROM products WHERE id = ANY($1::int[])`,
       [productIds]
     );
     const productMap = new Map(productsRes.rows.map((p) => [p.id, p]));
@@ -60,10 +60,14 @@ router.post('/', async (req, res, next) => {
       const qty = Math.max(1, Number(item.quantity) || 1);
       const unit = Number(p.price);
       const subtotal = unit * qty;
+      const rangeNote =
+        p.price_type === 'range' && p.price_max != null
+          ? ` [price range KSh ${unit}-KSh ${Number(p.price_max)}]`
+          : '';
       total += subtotal;
       insertItems.push({
         product_id: p.id,
-        product_name: p.name,
+        product_name: p.name + rangeNote,
         unit_price: unit,
         quantity: qty,
         subtotal,

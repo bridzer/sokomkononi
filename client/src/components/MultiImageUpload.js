@@ -1,9 +1,12 @@
 import React, { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../api/client';
-
-const MAX_BYTES = 20 * 1024 * 1024;                         // 20 MB per image
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+import {
+  buildBatchImageForm,
+  buildSingleImageForm,
+  formatUploadError,
+  validateImageFile,
+} from '../utils/upload';
 
 /**
  * Multi-image uploader for a product gallery.
@@ -31,12 +34,9 @@ export default function MultiImageUpload({
   const pick = () => inputRef.current?.click();
 
   const validate = (file) => {
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      toast.error(`${file.name}: only JPG, PNG, WEBP, GIF or SVG`);
-      return false;
-    }
-    if (file.size > MAX_BYTES) {
-      toast.error(`${file.name}: exceeds 20 MB`);
+    const err = validateImageFile(file);
+    if (err) {
+      toast.error(err);
       return false;
     }
     return true;
@@ -58,19 +58,13 @@ export default function MultiImageUpload({
 
     setUploading(true);
     try {
-      // NB: do NOT set Content-Type manually here. axios detects the FormData
-      // object and lets the browser add `multipart/form-data; boundary=...`
-      // automatically — setting it by hand would strip the boundary and make
-      // multer reject the request.
       let uploadedUrls = [];
       if (chosen.length === 1) {
-        const form = new FormData();
-        form.append('image', chosen[0]);
+        const form = buildSingleImageForm(chosen[0]);
         const { data } = await api.post('/admin/uploads', form);
         uploadedUrls = [data.url];
       } else {
-        const form = new FormData();
-        chosen.forEach((f) => form.append('images', f));
+        const form = buildBatchImageForm(chosen);
         const { data } = await api.post('/admin/uploads/batch', form);
         uploadedUrls = (data.files || []).map((f) => f.url).filter(Boolean);
       }
@@ -88,12 +82,9 @@ export default function MultiImageUpload({
         status: err.response?.status,
         data: err.response?.data,
         message: err.message,
+        code: err.code,
       });
-      toast.error(
-        err.response?.data?.error ||
-          err.message ||
-          'Upload failed — check console for details'
-      );
+      toast.error(formatUploadError(err));
     } finally {
       setUploading(false);
     }
@@ -101,8 +92,9 @@ export default function MultiImageUpload({
 
   const onInputChange = (e) => {
     const list = e.target.files;
-    e.target.value = '';
-    handleFiles(list);
+    handleFiles(list).finally(() => {
+      e.target.value = '';
+    });
   };
 
   const remove = (idx) => {
@@ -146,7 +138,6 @@ export default function MultiImageUpload({
             } bg-slate-50`}
           >
             <div className="aspect-square">
-              {/* Decorative in the admin editor — the label lives outside. */}
               <img src={url} alt="" className="w-full h-full object-cover" />
             </div>
 
@@ -156,7 +147,6 @@ export default function MultiImageUpload({
               </span>
             )}
 
-            {/* Controls — always visible on touch devices */}
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-1.5 flex items-center justify-between gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
               <div className="flex gap-1">
                 <button
@@ -228,7 +218,7 @@ export default function MultiImageUpload({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,.jpg,.jpeg,.png,.webp,.gif,.svg"
         multiple
         className="hidden"
         onChange={onInputChange}

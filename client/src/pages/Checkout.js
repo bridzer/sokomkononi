@@ -2,7 +2,8 @@ import React, { useState, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
-import { formatKsh, cartWhatsAppMessage, PHONE_NUMBERS } from '../utils/format';
+import { cartWhatsAppMessage, formatKsh, PHONE_NUMBERS } from '../utils/format';
+import { formatProductPrice } from '../utils/pricing';
 import api from '../api/client';
 import WhatsAppButton from '../components/WhatsAppButton';
 
@@ -166,7 +167,10 @@ export default function Checkout() {
                 <div>
                   <div className="font-medium">{i.name}</div>
                   <div className="text-slate-500">
-                    {i.quantity} × {formatKsh(i.price)}
+                    {i.quantity} × {formatProductPrice(i)}
+                    {i.price_type === 'range' && i.price_max ? (
+                      <span className="block text-[11px] text-slate-400">Total uses minimum price</span>
+                    ) : null}
                   </div>
                 </div>
                 <div className="font-medium">{formatKsh(i.price * i.quantity)}</div>

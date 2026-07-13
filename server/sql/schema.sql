@@ -59,6 +59,28 @@ WHERE (images IS NULL OR images = '[]'::jsonb)
   AND image_url IS NOT NULL
   AND image_url <> '';
 
+-- Pricing modes: fixed (default) or range (price = min, price_max = max)
+ALTER TABLE products ADD COLUMN IF NOT EXISTS price_type VARCHAR(10) NOT NULL DEFAULT 'fixed';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS price_max NUMERIC(12,2);
+
+UPDATE products SET price_type = 'fixed' WHERE price_type IS NULL OR price_type = '';
+UPDATE products SET price_max = NULL WHERE price_type = 'fixed';
+
+DO $$ BEGIN
+  ALTER TABLE products ADD CONSTRAINT products_price_type_check
+    CHECK (price_type IN ('fixed', 'range'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE products ADD CONSTRAINT products_price_max_check
+    CHECK (
+      (price_type = 'fixed' AND price_max IS NULL) OR
+      (price_type = 'range' AND price_max IS NOT NULL AND price_max >= price)
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_active ON products(is_active);
 CREATE INDEX IF NOT EXISTS idx_products_featured ON products(is_featured);

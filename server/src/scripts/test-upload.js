@@ -80,6 +80,77 @@ async function main() {
   const auth = { Authorization: `Bearer ${token}` };
   const png = Buffer.from(TINY_PNG_B64, 'base64');
 
+  // --- 3b. Chromium regression: manual Content-Type WITHOUT boundary ----
+  // This simulates the axios bug that breaks Chrome/Edge uploads.
+  try {
+    const fd = new FormData();
+    fd.append('image', new Blob([png], { type: 'image/png' }), 'bad-boundary.png');
+    const r = await fetch(`${BASE}/api/admin/uploads`, {
+      method: 'POST',
+      headers: {
+        ...auth,
+        'Content-Type': 'multipart/form-data', // NO boundary — must fail
+      },
+      body: fd,
+    });
+    step(
+      'regression — manual Content-Type without boundary is rejected',
+      r.status !== 201,
+      `status=${r.status} (must not be 201 — proves Chromium boundary bug)`
+    );
+  } catch (err) {
+    step('regression — manual Content-Type without boundary', false, err.message);
+  }
+
+  // --- 3c. Chromium regression: application/octet-stream + .jpg ext -----
+  try {
+    const fd = new FormData();
+    fd.append(
+      'image',
+      new Blob([png], { type: 'application/octet-stream' }),
+      'octet-stream.jpg'
+    );
+    const r = await fetch(`${BASE}/api/admin/uploads`, {
+      method: 'POST',
+      headers: auth,
+      body: fd,
+    });
+    const body = await r.json();
+    step(
+      'regression — octet-stream MIME with .jpg extension is accepted',
+      r.status === 201 && body.url,
+      `status=${r.status} url=${body.url}`
+    );
+    if (body.url) {
+      try {
+        fs.unlinkSync(path.join(__dirname, '..', '..', 'uploads', body.url.replace(/^\/uploads\//, '')));
+      } catch { /* ignore */ }
+    }
+  } catch (err) {
+    step('regression — octet-stream + .jpg', false, err.message);
+  }
+
+  // --- 3d. CORS preflight (Chromium sends OPTIONS before auth POST) -----
+  try {
+    const r = await fetch(`${BASE}/api/admin/uploads`, {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'http://localhost:3000',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'authorization,content-type',
+      },
+    });
+    const allowOrigin = r.headers.get('access-control-allow-origin');
+    const allowHeaders = r.headers.get('access-control-allow-headers') || '';
+    step(
+      'CORS preflight — OPTIONS /api/admin/uploads',
+      r.ok && allowOrigin && /authorization/i.test(allowHeaders),
+      `status=${r.status} allow-origin=${allowOrigin}`
+    );
+  } catch (err) {
+    step('CORS preflight', false, err.message);
+  }
+
   // --- 3. Single upload --------------------------------------------------
   let singleUrl;
   try {

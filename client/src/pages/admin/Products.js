@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../api/client';
-import { formatKsh } from '../../utils/format';
+import { formatApiError } from '../../utils/apiError';
+import {
+  buildPricingPayload,
+  formatProductPrice,
+  pricingFromProduct,
+  validatePricingForm,
+} from '../../utils/pricing';
 import SafeImage, { DEFAULT_FALLBACK } from '../../components/SafeImage';
 import MultiImageUpload from '../../components/MultiImageUpload';
+import PriceFields from '../../components/PriceFields';
 
 const empty = {
   id: null,
@@ -13,7 +20,9 @@ const empty = {
   breed: '',
   age_stage: '',
   unit: 'each',
+  price_type: 'fixed',
   price: '',
+  price_max: '',
   stock: 0,
   image_url: '',
   images: [],
@@ -62,56 +71,45 @@ export default function AdminProducts() {
       ...p,
       category_id: p.category_id || '',
       images: coerceImages(p),
+      ...pricingFromProduct(p),
     });
   const close = () => setEditing(null);
 
   const save = async (e) => {
     e.preventDefault();
+
+    const pricingError = validatePricingForm(editing);
+    if (pricingError) {
+      toast.error(pricingError);
+      return;
+    }
+
     try {
       const images = Array.isArray(editing.images) ? editing.images.filter(Boolean) : [];
+      const pricing = buildPricingPayload(editing);
       const payload = {
         ...editing,
-        price: Number(editing.price),
-        stock: Number(editing.stock),
+        ...pricing,
+        stock: Number(editing.stock) || 0,
         category_id: editing.category_id ? Number(editing.category_id) : null,
         images,
         image_url: images[0] || null,
       };
 
-      // Temporary diagnostic — helps confirm the gallery is being sent. Safe
-      // to remove once the flow is verified in your environment.
-      // eslint-disable-next-line no-console
-      console.log('[admin/products save] payload', {
-        id: editing.id,
-        image_url: payload.image_url,
-        imagesCount: payload.images.length,
-        images: payload.images,
-      });
-
-      const { data } = editing.id
+      editing.id
         ? await api.put(`/admin/products/${editing.id}`, payload)
         : await api.post('/admin/products', payload);
-
-      // eslint-disable-next-line no-console
-      console.log('[admin/products save] response', {
-        id: data?.product?.id,
-        image_url: data?.product?.image_url,
-        imagesCount: Array.isArray(data?.product?.images)
-          ? data.product.images.length
-          : 'n/a',
-      });
 
       toast.success(editing.id ? 'Product updated' : 'Product created');
       close();
       load();
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('[admin/products save] failed', {
         status: err.response?.status,
         data: err.response?.data,
         message: err.message,
       });
-      toast.error(err.response?.data?.error || err.message || 'Save failed');
+      toast.error(formatApiError(err, 'Failed to save product'));
     }
   };
 
@@ -122,7 +120,7 @@ export default function AdminProducts() {
       toast.success('Product deleted');
       load();
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Delete failed');
+      toast.error(formatApiError(err, 'Failed to delete product'));
     }
   };
 
@@ -187,7 +185,7 @@ export default function AdminProducts() {
                           {p.age_stage && <span>· {p.age_stage}</span>}
                           <span>· Stock: {p.stock}</span>
                         </div>
-                        <div className="mt-1 font-bold text-brand-700">{formatKsh(p.price)}</div>
+                        <div className="mt-1 font-bold text-brand-700">{formatProductPrice(p)}</div>
                       </div>
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -263,8 +261,8 @@ export default function AdminProducts() {
                     </td>
                     <td className="p-3 text-slate-700">{p.category_name || '—'}</td>
                     <td className="p-3 text-slate-700">{p.age_stage || '—'}</td>
-                    <td className="p-3 text-right font-semibold text-brand-700">
-                      {formatKsh(p.price)}
+                    <td className="p-3 text-right font-semibold text-brand-700 whitespace-nowrap">
+                      {formatProductPrice(p)}
                     </td>
                     <td className="p-3 text-right">{p.stock}</td>
                     <td className="p-3 text-center">
@@ -369,16 +367,14 @@ export default function AdminProducts() {
                   placeholder="each / per bird / per tray"
                 />
               </div>
-              <div>
-                <label className="label">Price (KSh) *</label>
-                <input
-                  type="number"
-                  className="input"
-                  value={editing.price}
-                  onChange={(e) => setEditing({ ...editing, price: e.target.value })}
-                  required
-                />
-              </div>
+              <PriceFields
+                value={{
+                  price_type: editing.price_type,
+                  price: editing.price,
+                  price_max: editing.price_max,
+                }}
+                onChange={(pricing) => setEditing({ ...editing, ...pricing })}
+              />
               <div>
                 <label className="label">Stock</label>
                 <input

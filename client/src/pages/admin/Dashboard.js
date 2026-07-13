@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import { formatKsh } from '../../utils/format';
+import { formatProductPrice } from '../../utils/pricing';
 
 function Stat({ label, value, hint, colorClass = 'text-brand-700' }) {
   return (
@@ -93,7 +94,7 @@ export default function Dashboard() {
                 <div className="text-slate-800 line-clamp-2">{p.name}</div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-red-600 font-semibold">{p.stock} left</span>
-                  <span className="text-slate-500">{formatKsh(p.price)}</span>
+                  <span className="text-slate-500">{formatProductPrice(p)}</span>
                 </div>
               </div>
             ))}

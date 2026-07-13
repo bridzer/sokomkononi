@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState, Fragment } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import api from '../api/client';
-import { formatKsh, orderWhatsAppMessage, PHONE_NUMBERS } from '../utils/format';
+import { orderWhatsAppMessage, PHONE_NUMBERS } from '../utils/format';
+import { formatProductPrice } from '../utils/pricing';
 import { useCart } from '../context/CartContext';
 import WhatsAppButton from '../components/WhatsAppButton';
 import SafeImage, { DEFAULT_FALLBACK } from '../components/SafeImage';
@@ -155,9 +156,9 @@ export default function ProductDetail() {
             </span>
           )}
           <h1 className="text-3xl font-bold text-slate-800 mt-1">{product.name}</h1>
-          <div className="mt-2 flex items-center gap-3">
-            <div className="text-3xl font-extrabold text-brand-700">
-              {formatKsh(product.price)}
+          <div className="mt-2 flex items-center gap-3 flex-wrap">
+            <div className="text-2xl sm:text-3xl font-extrabold text-brand-700">
+              {formatProductPrice(product)}
             </div>
             <span className="text-sm text-slate-500">{product.unit}</span>
           </div>

@@ -32,6 +32,8 @@ export function CartProvider({ children }) {
           product_id: product.id,
           name: product.name,
           price: Number(product.price),
+          price_type: product.price_type || 'fixed',
+          price_max: product.price_max != null ? Number(product.price_max) : null,
           image_url: product.image_url,
           unit: product.unit,
           quantity: qty,

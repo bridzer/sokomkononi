@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { formatKsh, orderWhatsAppMessage } from '../utils/format';
+import { formatProductPrice, orderWhatsAppMessage } from '../utils/format';
 import { useCart } from '../context/CartContext';
 import WhatsAppButton from './WhatsAppButton';
 
@@ -59,7 +59,7 @@ export default function ProductCard({ product }) {
 
         <div className="mt-auto pt-2 flex items-baseline gap-2 flex-wrap">
           <div className="text-lg font-extrabold text-brand-700 tabular-nums">
-            {formatKsh(product.price)}
+            {formatProductPrice(product)}
           </div>
           <div className="text-[11px] text-slate-500">/ {product.unit}</div>
         </div>

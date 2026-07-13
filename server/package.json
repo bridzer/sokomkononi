@@ -11,7 +11,8 @@
     "db:seed": "node src/scripts/seed.js",
     "db:reset": "node src/scripts/migrate.js reset && node src/scripts/seed.js",
     "db:cleanup:images": "node src/scripts/cleanup-images.js",
-    "test:upload": "node src/scripts/test-upload.js"
+    "test:upload": "node src/scripts/test-upload.js",
+    "test:pricing": "node src/scripts/test-pricing.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

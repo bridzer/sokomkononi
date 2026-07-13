@@ -4,7 +4,7 @@ import StatsSection from '../components/StatsSection';
 import WhatsAppButton from '../components/WhatsAppButton';
 import PhoneButton from '../components/PhoneButton';
 import SafeImage from '../components/SafeImage';
-//import GoogleMapSection from '../components/GoogleMapSection';
+import GoogleMapSection from '../components/GoogleMapSection';
 import { BUSINESS } from '../utils/format';
 import Shop from './Shop';
 export default function Home() {
@@ -30,11 +30,11 @@ export default function Home() {
               Kalro Farm Kenya · Naivasha
             </span>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-[1.1]">
-              Healthy Dairy Cattle, Goats, Poultry &amp; Farm-Fresh Eggs
+              Healthy Dairy Cattle, Goats, Poultry &amp; Farm Products
             </h1>
             <p className="mt-3 sm:mt-4 text-base sm:text-lg text-white/90 max-w-xl">
-              High-quality Freshian, Ayshire, Alpine and Toggenburg Dairy goats, Boer goats,
-              Commercial layers, Kanga birds and farm-fresh eggs. Fully vaccinated,
+              High-quality Freshian, Ayshire, Alpine and Toggenburg Dairy goats, Poultry,
+              Farm Machinery, Kanga Birds and Fresh Farm Produce. Fully vaccinated,
               disease-free, delivered countrywide.
             </p>
 
@@ -106,7 +106,7 @@ export default function Home() {
       <StatsSection />
 
       {/* -------- Google Maps -------- */}
-      
+      <GoogleMapSection />
 
       {/* -------- Why choose -------- */}
       <section className="bg-brand-50 mt-2 sm:mt-14">

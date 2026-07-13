@@ -1,9 +1,11 @@
 import React, { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../api/client';
-
-const MAX_BYTES = 20 * 1024 * 1024;
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+import {
+  buildSingleImageForm,
+  formatUploadError,
+  validateImageFile,
+} from '../utils/upload';
 
 export default function ImageUpload({ value, onChange, label = 'Image' }) {
   const inputRef = useRef(null);
@@ -13,24 +15,19 @@ export default function ImageUpload({ value, onChange, label = 'Image' }) {
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
-    e.target.value = '';
     if (!file) return;
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      toast.error('Please choose a JPG, PNG, WEBP, GIF or SVG image');
-      return;
-    }
-    if (file.size > MAX_BYTES) {
-      toast.error('Image must be 20 MB or smaller');
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      e.target.value = '';
       return;
     }
 
-    const form = new FormData();
-    form.append('image', file);
+    const form = buildSingleImageForm(file);
 
     setUploading(true);
     try {
-      // Let axios/browser set Content-Type with the multipart boundary.
       const { data } = await api.post('/admin/uploads', form);
       onChange?.(data.url);
       toast.success('Image uploaded');
@@ -40,14 +37,12 @@ export default function ImageUpload({ value, onChange, label = 'Image' }) {
         status: err.response?.status,
         data: err.response?.data,
         message: err.message,
+        code: err.code,
       });
-      toast.error(
-        err.response?.data?.error ||
-          err.message ||
-          'Upload failed — check console for details'
-      );
+      toast.error(formatUploadError(err));
     } finally {
       setUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -97,7 +92,7 @@ export default function ImageUpload({ value, onChange, label = 'Image' }) {
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,.jpg,.jpeg,.png,.webp,.gif,.svg"
           className="hidden"
           onChange={handleFile}
         />

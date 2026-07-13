@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { formatKsh } from '../utils/format';
+import { formatProductPrice } from '../utils/pricing';
 import SafeImage, { DEFAULT_FALLBACK } from '../components/SafeImage';
 
 export default function Cart() {
@@ -32,7 +33,12 @@ export default function Cart() {
               />
               <div className="flex-1">
                 <div className="font-medium text-slate-800">{i.name}</div>
-                <div className="text-sm text-slate-500">{formatKsh(i.price)} · {i.unit}</div>
+                <div className="text-sm text-slate-500">
+                  {formatProductPrice(i)} · {i.unit}
+                  {i.price_type === 'range' && i.price_max ? (
+                    <span className="text-xs text-slate-400"> (est. from min)</span>
+                  ) : null}
+                </div>
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex items-center border border-slate-300 rounded-lg">
                     <button
