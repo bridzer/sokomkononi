@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../api/client';
 
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 20 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
 
 export default function ImageUpload({ value, onChange, label = 'Image' }) {
@@ -21,7 +21,7 @@ export default function ImageUpload({ value, onChange, label = 'Image' }) {
       return;
     }
     if (file.size > MAX_BYTES) {
-      toast.error('Image must be 5 MB or smaller');
+      toast.error('Image must be 20 MB or smaller');
       return;
     }
 
@@ -86,7 +86,7 @@ export default function ImageUpload({ value, onChange, label = 'Image' }) {
             )}
           </div>
           <p className="text-xs text-slate-500 mt-2">
-            JPG, PNG, WEBP, GIF or SVG · up to 5 MB. Uploaded to server.
+            JPG, PNG, WEBP, GIF or SVG · up to 20 MB. Uploaded to server.
           </p>
           {value && (
             <p className="text-xs text-slate-400 mt-1 truncate" title={value}>

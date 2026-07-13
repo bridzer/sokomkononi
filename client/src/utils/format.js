@@ -153,6 +153,27 @@ export const BUSINESS = {
   email: envStr('REACT_APP_BUSINESS_EMAIL') || 'info@kalro.store',
 };
 
+/** Google Maps embed settings (homepage location section). */
+export const MAP_CONFIG = {
+  apiKey: envStr('REACT_APP_GOOGLE_MAPS_API_KEY'),
+  lat: envStr('REACT_APP_GOOGLE_MAPS_LAT')
+    ? Number(envStr('REACT_APP_GOOGLE_MAPS_LAT'))
+    : -0.7167,
+  lng: envStr('REACT_APP_GOOGLE_MAPS_LNG')
+    ? Number(envStr('REACT_APP_GOOGLE_MAPS_LNG'))
+    : 36.4333,
+  zoom: Number(envStr('REACT_APP_GOOGLE_MAPS_ZOOM')) || 14,
+  query:
+    envStr('REACT_APP_GOOGLE_MAPS_QUERY') ||
+    envStr('REACT_APP_BUSINESS_LOCATION') ||
+    'Kalro Farm Kenya, Naivasha',
+  title: envStr('REACT_APP_GOOGLE_MAPS_TITLE') || 'Visit Kalro Farm Kenya',
+  description:
+    envStr('REACT_APP_GOOGLE_MAPS_DESCRIPTION') ||
+    'Find us in Naivasha. Get directions, plan your visit, or share our location with your driver.',
+  hours: envStr('REACT_APP_GOOGLE_MAPS_HOURS') || 'Mon–Sat: 8:00 AM – 6:00 PM',
+};
+
 /** All configured phone lines (for calling). */
 export const PHONE_NUMBERS = _lines.map((l) => ({
   id: l.id,

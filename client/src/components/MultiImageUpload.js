@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../api/client';
 
-const MAX_BYTES = 5 * 1024 * 1024;                          // 5 MB per image
+const MAX_BYTES = 20 * 1024 * 1024;                         // 20 MB per image
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
 
 /**
@@ -36,7 +36,7 @@ export default function MultiImageUpload({
       return false;
     }
     if (file.size > MAX_BYTES) {
-      toast.error(`${file.name}: exceeds 5 MB`);
+      toast.error(`${file.name}: exceeds 20 MB`);
       return false;
     }
     return true;
@@ -220,7 +220,7 @@ export default function MultiImageUpload({
       </div>
 
       <p className="text-xs text-slate-500 mt-2">
-        JPG, PNG, WEBP, GIF or SVG · up to 5 MB each · max {max} images. The first
+        JPG, PNG, WEBP, GIF or SVG · up to 20 MB each · max {max} images. The first
         image is used as the product cover; drag the arrows to reorder or click{' '}
         <span className="text-brand-700 font-semibold">★</span> to promote a photo to cover.
       </p>

@@ -4,6 +4,7 @@ import StatsSection from '../components/StatsSection';
 import WhatsAppButton from '../components/WhatsAppButton';
 import PhoneButton from '../components/PhoneButton';
 import SafeImage from '../components/SafeImage';
+import GoogleMapSection from '../components/GoogleMapSection';
 import { BUSINESS } from '../utils/format';
 import Shop from './Shop';
 export default function Home() {
@@ -104,7 +105,7 @@ export default function Home() {
       {/* -------- Trust / Stats -------- */}
       <StatsSection />
 
-      {/* -------- Featured Products -------- */}
+      {/* -------- Google Maps -------- */}
       
 
       {/* -------- Why choose -------- */}
