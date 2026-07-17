@@ -102,15 +102,15 @@ const FALLBACK_LINES = [
     id: 'main',
     label: 'Main Line',
     subtitle: 'Sales & orders',
-    number: '+254208224938',
-    whatsapp: '+254756908482',
-    display: '020 822 4938/014 387 6296',
+    number: '+254762179325',
+    whatsapp: '+254762179325',
+    display: '0762179325',
   },
   {
     id: 'naivasha',
     label: 'Naivasha Branch',
     subtitle: 'Poultry & eggs',
-    number: '+254756908482',
+    number: '+254762179325',
   },
 ];
 
