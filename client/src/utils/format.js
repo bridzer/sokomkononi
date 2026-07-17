@@ -109,7 +109,7 @@ const FALLBACK_LINES = [
   {
     id: 'naivasha',
     label: 'Naivasha Branch',
-    subtitle: 'Poultry & eggs',
+    subtitle: 'Poultry & Eggs',
     number: '+254762179325',
   },
 ];
