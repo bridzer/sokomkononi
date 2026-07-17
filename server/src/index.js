@@ -26,6 +26,7 @@ const paymentRoutes = require('./routes/payments');
 const { handleLoopCallback } = require('./routes/payments');
 const errorHandler = require('./middleware/error');
 const { registerAdsenseRoutes } = require('./utils/adsenseServe');
+const { getStorage } = require('./storage');
 
 const app = express();
 app.set('trust proxy', 1); // required behind Railway/Nginx for correct client IP + rate limiting
@@ -102,9 +103,9 @@ app.post(
 app.use(express.json({ limit: '2mb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'tiny' : 'dev'));
 
-// Serve uploaded images — missing files get a placeholder (not a JSON ENOENT error).
+// Serve uploaded images — local disk first, then S3 when configured.
 ensureUploadDir();
-app.use('/uploads', (req, res, next) => {
+app.use('/uploads', async (req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
 
   const filename = resolveUploadFilename(req.path);
@@ -118,7 +119,30 @@ app.use('/uploads', (req, res, next) => {
     });
   }
 
-  // File referenced in DB but not on disk (common after Railway redeploy without a Volume).
+  const storage = getStorage();
+  if (storage.type === 's3') {
+    try {
+      if (req.method === 'HEAD') {
+        const head = await storage.headObject(filename);
+        res.set('Cache-Control', 'public, max-age=604800, immutable');
+        if (head.ContentType) res.type(head.ContentType);
+        if (head.ContentLength != null) res.set('Content-Length', String(head.ContentLength));
+        return res.end();
+      }
+
+      const object = await storage.readObject(filename);
+      res.set('Cache-Control', 'public, max-age=604800, immutable');
+      if (object.contentType) res.type(object.contentType);
+      if (object.contentLength != null) res.set('Content-Length', String(object.contentLength));
+      return object.body.pipe(res);
+    } catch (err) {
+      if (err.name !== 'NoSuchKey' && err.$metadata?.httpStatusCode !== 404) {
+        console.warn(`[uploads] S3 read failed for "${filename}":`, err.message);
+      }
+    }
+  }
+
+  // File referenced in DB but not found in storage.
   console.warn(`[uploads] Missing file "${filename}" — serving placeholder`);
   res.set('Cache-Control', 'no-store');
   if (fs.existsSync(PLACEHOLDER_PATH)) {

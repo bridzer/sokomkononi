@@ -240,11 +240,22 @@ Loop integration uses the [Loop sandbox API](https://sandbox.loop.co.ke/devporta
 | Variable | Description |
 |----------|-------------|
 | `APP_BASE_URL` | Public site URL, e.g. `https://kalro.store` |
-| `LOOP_API_BASE_URL` | `https://sandbox.loop.co.ke` (or production URL) |
+| `LOOP_API_BASE_URL` | **`https://sandbox.loop.co.ke`** — do **not** use `api-sandbox.loopdfs.co.ke` (invalid DNS) |
 | `LOOP_CLIENT_ID` | From Loop developer portal |
 | `LOOP_CLIENT_SECRET` | From Loop developer portal |
+| `LOOP_API_KEY` | Optional subscription key from dev portal (sent as `X-API-Key`) |
 | `LOOP_WEBHOOK_SECRET` | Optional — enables HMAC callback verification |
 | `LOOP_PAYMENT_INIT_PATH` | Default `/loop-api/1.0.0/payments/initiate` |
+
+Test locally:
+
+```bash
+cd server
+node src/scripts/test-loop-payment.js          # OAuth only
+node src/scripts/test-loop-payment.js --initiate # Full payment initiate test
+```
+
+If OAuth succeeds but payment returns **401**, subscribe your application to the Loop API in the [developer portal](https://sandbox.loop.co.ke/devportal/home) and confirm credentials.
 
 ### Enable in admin
 
@@ -313,7 +324,43 @@ Railway's build system (Railpack) needs to know this is a Node app deployable fr
    - Add variable: `UPLOAD_DIR=/app/server/uploads`
    - Redeploy, then re-upload images **once** — they will survive future deploys
 
-   **Option B — Cloudflare R2 / S3 (best for production):**
+   **Option B — Railway Storage Bucket / Cloudflare R2 / AWS S3:**
+
+   Railway buckets are **private** — files are uploaded to S3 and served through your app at `/uploads/...`.
+
+   1. In Railway project canvas: **+ New → Bucket** → pick region → create
+   2. Open your **web service → Variables → Add Variable Reference** → select the bucket → choose **AWS SDK** preset (or map manually below)
+   3. Add these on your **web service** (reference bucket vars where shown):
+
+   ```env
+   STORAGE_TYPE=s3
+   S3_BUCKET=${{Bucket.BUCKET}}
+   S3_ENDPOINT=${{Bucket.ENDPOINT}}
+   S3_REGION=${{Bucket.REGION}}
+   S3_ACCESS_KEY_ID=${{Bucket.ACCESS_KEY_ID}}
+   S3_SECRET_ACCESS_KEY=${{Bucket.SECRET_ACCESS_KEY}}
+   APP_BASE_URL=https://kalro.store
+   S3_PUBLIC_BASE_URL=https://kalro.store/uploads
+   ```
+
+   Check the bucket **Credentials** tab for URL style:
+   - **Virtual-hosted** (default): leave `S3_FORCE_PATH_STYLE` unset
+   - **Path-style** (older buckets): add `S3_FORCE_PATH_STYLE=true`
+
+   You can also use Railway's native names directly — the app accepts `AWS_*` and `BUCKET` aliases:
+
+   ```env
+   STORAGE_TYPE=s3
+   AWS_S3_BUCKET_NAME=${{Bucket.BUCKET}}
+   AWS_ENDPOINT_URL=${{Bucket.ENDPOINT}}
+   AWS_DEFAULT_REGION=${{Bucket.REGION}}
+   AWS_ACCESS_KEY_ID=${{Bucket.ACCESS_KEY_ID}}
+   AWS_SECRET_ACCESS_KEY=${{Bucket.SECRET_ACCESS_KEY}}
+   APP_BASE_URL=https://kalro.store
+   ```
+
+   **Cloudflare R2** (public CDN URL):
+
    ```env
    STORAGE_TYPE=s3
    S3_BUCKET=kalro-uploads
@@ -324,7 +371,8 @@ Railway's build system (Railpack) needs to know this is a Node app deployable fr
    S3_PUBLIC_BASE_URL=https://pub-xxxx.r2.dev
    S3_FORCE_PATH_STYLE=true
    ```
-   New uploads get permanent `https://…` URLs in the database. Old `/uploads/…` paths still work if files exist on disk.
+
+   After deploy, re-upload product images once. Old `/uploads/...` paths in the DB still work via the S3 proxy.
 
    After deploy, check **`GET /api/health`** — the `uploads` section shows whether storage is persistent. If you see a warning, uploads will be lost on the next deploy.
 

@@ -146,11 +146,14 @@ router.post('/', async (req, res, next) => {
         );
       } catch (payErr) {
         console.error('[orders] Loop initiate failed:', payErr.message);
+        if (payErr.data) {
+          console.error('[orders] Loop API response:', JSON.stringify(payErr.data));
+        }
         await query(
           `UPDATE orders SET payment_status = 'failed', updated_at = NOW() WHERE id = $1`,
           [order.id]
         );
-        return res.status(502).json({
+        return res.status(payErr.status === 401 ? 502 : payErr.status || 502).json({
           error: payErr.expose ? payErr.message : 'Could not initiate Loop payment',
           order: { ...order, items: itemsRes.rows, payment_status: 'failed' },
         });

@@ -4,26 +4,53 @@
  * Docs portal: https://sandbox.loop.co.ke/devportal/docs/loop-api/introduction
  *
  * Credentials (NEVER expose to the browser):
- *   LOOP_API_BASE_URL       — e.g. https://sandbox.loop.co.ke
+ *   LOOP_API_BASE_URL       — https://sandbox.loop.co.ke (NOT api-sandbox.loopdfs.co.ke)
  *   LOOP_CLIENT_ID
  *   LOOP_CLIENT_SECRET
+ *   LOOP_API_KEY            — optional subscription/API key (X-API-Key header)
  *   LOOP_WEBHOOK_SECRET     — optional HMAC verification for callbacks
  *   APP_BASE_URL            — public site URL for callback (e.g. https://kalro.store)
  *   LOOP_PAYMENT_INIT_PATH  — default /loop-api/1.0.0/payments/initiate
+ *   LOOP_OAUTH_SCOPE        — optional OAuth scope (default: server default scope)
  */
 const crypto = require('crypto');
 
 const DEFAULT_INIT_PATH = '/loop-api/1.0.0/payments/initiate';
+const DEFAULT_BASE_URL = 'https://sandbox.loop.co.ke';
+
+/** Known invalid hostnames from onboarding docs — map to the working WSO2 gateway. */
+const BASE_URL_ALIASES = {
+  'https://api-sandbox.loopdfs.co.ke': DEFAULT_BASE_URL,
+  'http://api-sandbox.loopdfs.co.ke': DEFAULT_BASE_URL,
+  'https://api-sandbox.loop.co.ke': DEFAULT_BASE_URL,
+  'http://api-sandbox.loop.co.ke': DEFAULT_BASE_URL,
+};
 
 let cachedToken = null;
 let tokenExpiresAt = 0;
+let warnedBaseUrl = false;
 
 function env(name, fallback = '') {
   return (process.env[name] || fallback).trim();
 }
 
+function resolveBaseUrl() {
+  let raw = env('LOOP_API_BASE_URL', DEFAULT_BASE_URL).replace(/\/+$/, '');
+  const aliased = BASE_URL_ALIASES[raw];
+  if (aliased) {
+    if (!warnedBaseUrl) {
+      console.warn(
+        `[loop] LOOP_API_BASE_URL "${raw}" is not reachable — using "${aliased}" instead`
+      );
+      warnedBaseUrl = true;
+    }
+    raw = aliased;
+  }
+  return raw;
+}
+
 function baseUrl() {
-  return env('LOOP_API_BASE_URL', 'https://sandbox.loop.co.ke').replace(/\/+$/, '');
+  return resolveBaseUrl();
 }
 
 function appBaseUrl() {
@@ -32,6 +59,43 @@ function appBaseUrl() {
 
 function isConfigured() {
   return Boolean(env('LOOP_CLIENT_ID') && env('LOOP_CLIENT_SECRET') && baseUrl());
+}
+
+function apiKey() {
+  return env('LOOP_API_KEY');
+}
+
+function buildAuthHeaders(token) {
+  const headers = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  const key = apiKey();
+  if (key) {
+    headers['X-API-Key'] = key;
+    headers.apikey = key;
+  }
+  return headers;
+}
+
+function loopApiErrorMessage(status, data) {
+  const base =
+    data.message ||
+    data.description ||
+    data.error_description ||
+    data.error ||
+    `Loop API error (${status})`;
+
+  if (status === 401) {
+    return (
+      'Loop API rejected the request (401 Unauthorized). ' +
+      'In the Loop developer portal, subscribe your application to the Loop API, ' +
+      'confirm LOOP_CLIENT_ID / LOOP_CLIENT_SECRET, and set LOOP_API_KEY if provided. ' +
+      `(${base})`
+    );
+  }
+
+  return base;
 }
 
 /** Normalize Kenyan phone to 254XXXXXXXXX */
@@ -46,7 +110,30 @@ function normalizeLoopPhone(phone) {
 }
 
 async function fetchJson(url, options = {}) {
-  const res = await fetch(url, options);
+  let res;
+  try {
+    res = await fetch(url, options);
+  } catch (cause) {
+    const host = (() => {
+      try {
+        return new URL(url).origin;
+      } catch {
+        return url;
+      }
+    })();
+    const code = cause?.cause?.code || cause?.code;
+    const unreachable = code === 'EAI_AGAIN' || code === 'ENOTFOUND' || code === 'ECONNREFUSED';
+    const msg = unreachable
+      ? `Cannot reach Loop API at ${host} (${code || 'network error'}). Set LOOP_API_BASE_URL=https://sandbox.loop.co.ke`
+      : `Loop API request failed: ${cause.message}`;
+
+    const err = new Error(msg);
+    err.status = 502;
+    err.expose = true;
+    err.cause = cause;
+    throw err;
+  }
+
   const text = await res.text();
   let data;
   try {
@@ -54,18 +141,16 @@ async function fetchJson(url, options = {}) {
   } catch {
     data = { raw: text };
   }
+
   if (!res.ok) {
-    const msg =
-      data.message ||
-      data.description ||
-      data.error_description ||
-      data.error ||
-      `Loop API error (${res.status})`;
+    const msg = loopApiErrorMessage(res.status, data);
     const err = new Error(msg);
-    err.status = res.status;
+    err.status = res.status >= 500 ? 502 : res.status;
+    err.expose = res.status === 401 || res.status === 400 || res.status === 403;
     err.data = data;
     throw err;
   }
+
   return data;
 }
 
@@ -88,9 +173,16 @@ async function getAccessToken() {
   const clientId = env('LOOP_CLIENT_ID');
   const clientSecret = env('LOOP_CLIENT_SECRET');
   const authMode = env('LOOP_OAUTH_MODE', 'basic').toLowerCase();
+  const scope = env('LOOP_OAUTH_SCOPE');
 
-  let headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+  let headers = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    ...buildAuthHeaders(),
+  };
   let body = 'grant_type=client_credentials';
+  if (scope) {
+    body += `&scope=${encodeURIComponent(scope)}`;
+  }
 
   if (authMode === 'body') {
     body += `&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}`;
@@ -130,7 +222,6 @@ function callbackUrl() {
 
 /**
  * Initiate a Loop payment (STK push / mobile prompt).
- * Payload follows common Loop/WSO2 merchant patterns — adjust via env if your API differs.
  */
 async function initiatePayment({ order, phone }) {
   const normalizedPhone = normalizeLoopPhone(phone);
@@ -162,7 +253,7 @@ async function initiatePayment({ order, phone }) {
   const data = await fetchJson(`${baseUrl()}${paymentInitPath()}`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...buildAuthHeaders(token),
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
@@ -194,11 +285,10 @@ async function initiatePayment({ order, phone }) {
 
 /**
  * Verify webhook signature when LOOP_WEBHOOK_SECRET is set.
- * Supports `x-loop-signature` or `x-hub-signature-256` (sha256=...) headers.
  */
 function verifyWebhookSignature(rawBody, headers = {}) {
   const secret = env('LOOP_WEBHOOK_SECRET');
-  if (!secret) return true;
+  if (!secret || secret === 'your_webhook_secret_optional') return true;
 
   const sig =
     headers['x-loop-signature'] ||
@@ -249,6 +339,30 @@ function parseCallbackPayload(body) {
   };
 }
 
+/** Lightweight connectivity check for scripts / diagnostics. */
+async function testConnection() {
+  const result = {
+    baseUrl: baseUrl(),
+    configured: isConfigured(),
+    oauth: null,
+    paymentPath: paymentInitPath(),
+    callbackUrl: callbackUrl(),
+  };
+
+  if (!result.configured) {
+    return result;
+  }
+
+  try {
+    await getAccessToken();
+    result.oauth = 'ok';
+  } catch (err) {
+    result.oauth = `failed: ${err.message}`;
+  }
+
+  return result;
+}
+
 module.exports = {
   isConfigured,
   normalizeLoopPhone,
@@ -257,4 +371,5 @@ module.exports = {
   verifyWebhookSignature,
   parseCallbackPayload,
   callbackUrl,
+  testConnection,
 };
