@@ -26,7 +26,9 @@ export function loadAdsenseScript(clientId) {
     return scriptLoadPromise;
   }
 
-  const existing = document.getElementById(SCRIPT_ID);
+  const existing =
+    document.getElementById(SCRIPT_ID) ||
+    document.querySelector('script[src*="pagead/js/adsbygoogle.js"]');
   if (existing) {
     scriptLoadPromise = Promise.resolve(true);
     return scriptLoadPromise;

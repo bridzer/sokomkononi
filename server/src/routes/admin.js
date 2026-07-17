@@ -1,20 +1,33 @@
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
 const { query } = require('../db');
 const { requireAdmin } = require('../middleware/auth');
-const { upload, UPLOAD_DIR } = require('../middleware/upload');
+const { upload, buildFilename } = require('../middleware/upload');
+const { getStorage } = require('../storage');
 
 const router = express.Router();
 
 router.use(requireAdmin);
+
+async function persistUploadedFile(file) {
+  const storage = getStorage();
+  if (storage.useMemoryUpload) {
+    const filename = buildFilename(file.originalname, file.mimetype);
+    return storage.saveFromBuffer({
+      buffer: file.buffer,
+      filename,
+      mimetype: file.mimetype,
+      size: file.size,
+    });
+  }
+  return storage.saveFromDisk(file);
+}
 
 // --------- Uploads ---------
 // Multer errors (file too large, wrong mime) surface as errors with `.status`
 // so the shared errorHandler formats them as JSON — we still catch them here
 // to log the specific failure for easier debugging.
 router.post('/uploads', (req, res, next) => {
-  upload.single('image')(req, res, (err) => {
+  upload.single('image')(req, res, async (err) => {
     if (err) {
       console.warn('[upload:single] rejected:', err.code || err.message, {
         contentType: req.headers['content-type'],
@@ -29,20 +42,22 @@ router.post('/uploads', (req, res, next) => {
       });
       return res.status(400).json({ error: 'No file uploaded — use field name "image"' });
     }
-    const url = `/uploads/${req.file.filename}`;
-    console.log(`[upload:single] ${req.file.filename} (${req.file.size} bytes)`);
-    res.status(201).json({
-      url,
-      filename: req.file.filename,
-      size: req.file.size,
-      mimetype: req.file.mimetype,
-    });
+    try {
+      const saved = await persistUploadedFile(req.file);
+      console.log(`[upload:single] ${saved.filename} (${saved.size} bytes) -> ${saved.url}`);
+      res.status(201).json(saved);
+    } catch (saveErr) {
+      console.error('[upload:single] storage save failed:', saveErr.message);
+      return next(
+        Object.assign(new Error('Failed to store uploaded file'), { status: 500, expose: true })
+      );
+    }
   });
 });
 
 // Batch upload — up to 10 files at once under the `images` field name.
 router.post('/uploads/batch', (req, res, next) => {
-  upload.array('images', 10)(req, res, (err) => {
+  upload.array('images', 10)(req, res, async (err) => {
     if (err) {
       console.warn('[upload:batch] rejected:', err.code || err.message, {
         contentType: req.headers['content-type'],
@@ -57,33 +72,34 @@ router.post('/uploads/batch', (req, res, next) => {
       });
       return res.status(400).json({ error: 'No files uploaded — use field name "images"' });
     }
-    console.log(
-      `[upload:batch] ${files.length} file(s):`,
-      files.map((f) => f.filename).join(', ')
-    );
-    res.status(201).json({
-      files: files.map((f) => ({
-        url: `/uploads/${f.filename}`,
-        filename: f.filename,
-        size: f.size,
-        mimetype: f.mimetype,
-      })),
-    });
+    try {
+      const savedFiles = await Promise.all(files.map((f) => persistUploadedFile(f)));
+      console.log(
+        `[upload:batch] ${savedFiles.length} file(s):`,
+        savedFiles.map((f) => f.filename).join(', ')
+      );
+      res.status(201).json({ files: savedFiles });
+    } catch (saveErr) {
+      console.error('[upload:batch] storage save failed:', saveErr.message);
+      return next(
+        Object.assign(new Error('Failed to store uploaded files'), { status: 500, expose: true })
+      );
+    }
   });
 });
 
-router.delete('/uploads/:filename', (req, res) => {
+router.delete('/uploads/:filename', async (req, res, next) => {
   const { filename } = req.params;
   if (!/^[a-zA-Z0-9._-]+$/.test(filename)) {
     return res.status(400).json({ error: 'Invalid filename' });
   }
-  const filePath = path.join(UPLOAD_DIR, filename);
-  fs.unlink(filePath, (err) => {
-    if (err && err.code !== 'ENOENT') {
-      return res.status(500).json({ error: 'Failed to delete file' });
-    }
+  try {
+    await getStorage().delete(filename);
     res.json({ success: true });
-  });
+  } catch (err) {
+    console.error('[upload:delete] failed:', err.message);
+    next(Object.assign(new Error('Failed to delete file'), { status: 500, expose: true }));
+  }
 });
 
 const { normalizeProductPricing } = require('../utils/pricing');

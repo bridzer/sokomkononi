@@ -13,7 +13,7 @@ const {
   PLACEHOLDER_PATH,
   ensureUploadDir,
   resolveUploadFilename,
-  countUploadFiles,
+  getUploadDiagnostics,
 } = require('./config/uploads');
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
@@ -23,6 +23,7 @@ const contactRoutes = require('./routes/contact');
 const adminRoutes = require('./routes/admin');
 const settingsRoutes = require('./routes/settings');
 const errorHandler = require('./middleware/error');
+const { registerAdsenseRoutes } = require('./utils/adsenseServe');
 
 const app = express();
 app.set('trust proxy', 1); // required behind Railway/Nginx for correct client IP + rate limiting
@@ -126,7 +127,12 @@ const apiLimiter = rateLimit({
 app.use('/api', apiLimiter);
 
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'kalro-farm-api', time: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    service: 'kalro-farm-api',
+    time: new Date().toISOString(),
+    uploads: getUploadDiagnostics(),
+  });
 });
 
 app.use('/api/auth', authRoutes);
@@ -142,9 +148,12 @@ const CLIENT_BUILD = path.join(__dirname, '..', '..', 'client', 'build');
 const clientBuildExists = fs.existsSync(path.join(CLIENT_BUILD, 'index.html'));
 
 if (clientBuildExists) {
-  // Long cache for hashed static assets; HTML is served without immutable cache below.
+  const { loadIndexHtml } = registerAdsenseRoutes(app, CLIENT_BUILD);
+
+  // Serve static assets but NOT index.html — we inject AdSense verification at runtime.
   app.use(
     express.static(CLIENT_BUILD, {
+      index: false,
       maxAge: '1d',
       setHeaders(res, filePath) {
         if (filePath.endsWith('.html')) {
@@ -153,9 +162,14 @@ if (clientBuildExists) {
       },
     })
   );
-  // SPA fallback: any non-/api, non-/uploads GET request returns index.html
+
+  // SPA fallback with AdSense verification tags injected from env vars
   app.get(/^\/(?!api\/|uploads\/).*/, (_req, res) => {
-    res.sendFile(path.join(CLIENT_BUILD, 'index.html'));
+    const html = loadIndexHtml();
+    if (!html) {
+      return res.status(500).send('App build missing index.html');
+    }
+    res.type('html').send(html);
   });
 } else if (process.env.NODE_ENV === 'production') {
   console.warn(
@@ -194,14 +208,13 @@ async function ensureSchema() {
 }
 
 function logUploadsHealth() {
-  const count = countUploadFiles();
-  console.log(`[uploads] Directory: ${UPLOAD_DIR} (${count} file(s))`);
-  if (process.env.NODE_ENV === 'production' && count === 0) {
-    console.warn(
-      '[uploads] Upload folder is empty on production.\n' +
-        '         Mount a Railway Volume at /app/server/uploads and re-upload product images,\n' +
-        '         or run: railway run npm run db:cleanup:images -- --apply'
-    );
+  const info = getUploadDiagnostics();
+  console.log(
+    `[uploads] storage=${info.storageType} dir=${info.uploadDir} files=${info.fileCount}` +
+      (info.onPersistentMount != null ? ` mounted=${info.onPersistentMount}` : '')
+  );
+  if (info.warning) {
+    console.warn(`[uploads] ${info.warning}`);
   }
 }
 

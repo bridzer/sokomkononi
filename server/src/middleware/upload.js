@@ -2,6 +2,7 @@ const path = require('path');
 const crypto = require('crypto');
 const multer = require('multer');
 const { UPLOAD_DIR, ensureUploadDir } = require('../config/uploads');
+const { getStorage } = require('../storage');
 
 ensureUploadDir();
 
@@ -39,6 +40,25 @@ function mimeFromExtension(filename) {
   return EXT_TO_MIME[ext] || '';
 }
 
+function buildFilename(originalname, mimetype) {
+  const ext = (path.extname(originalname) || '').toLowerCase().slice(0, 8);
+  const safeExt = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'].includes(ext)
+    ? ext
+    : (() => {
+        const byMime = {
+          'image/jpeg': '.jpg',
+          'image/png': '.png',
+          'image/webp': '.webp',
+          'image/gif': '.gif',
+          'image/svg+xml': '.svg',
+        };
+        return byMime[normalizeMime(mimetype)] || '.jpg';
+      })();
+  const stamp = Date.now().toString(36);
+  const rand = crypto.randomBytes(6).toString('hex');
+  return `img-${stamp}-${rand}${safeExt}`;
+}
+
 /**
  * Accept files when MIME is valid OR when extension is a known image type.
  * Chromium on Windows sometimes sends "" or application/octet-stream.
@@ -55,28 +75,6 @@ function isAllowedImage(file) {
   return false;
 }
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const ext = (path.extname(file.originalname) || '').toLowerCase().slice(0, 8);
-    const safeExt = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'].includes(ext)
-      ? ext
-      : (() => {
-          const byMime = {
-            'image/jpeg': '.jpg',
-            'image/png': '.png',
-            'image/webp': '.webp',
-            'image/gif': '.gif',
-            'image/svg+xml': '.svg',
-          };
-          return byMime[normalizeMime(file.mimetype)] || '.jpg';
-        })();
-    const stamp = Date.now().toString(36);
-    const rand = crypto.randomBytes(6).toString('hex');
-    cb(null, `img-${stamp}-${rand}${safeExt}`);
-  },
-});
-
 function fileFilter(_req, file, cb) {
   if (!isAllowedImage(file)) {
     console.warn('[upload] rejected MIME:', file.mimetype, 'name:', file.originalname);
@@ -92,8 +90,23 @@ function fileFilter(_req, file, cb) {
   cb(null, true);
 }
 
+function createMulterStorage() {
+  const storageBackend = getStorage();
+
+  if (storageBackend.useMemoryUpload) {
+    return multer.memoryStorage();
+  }
+
+  return multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+    filename: (_req, file, cb) => {
+      cb(null, buildFilename(file.originalname, file.mimetype));
+    },
+  });
+}
+
 const upload = multer({
-  storage,
+  storage: createMulterStorage(),
   fileFilter,
   limits: {
     fileSize: 20 * 1024 * 1024, // 20 MB
@@ -102,4 +115,10 @@ const upload = multer({
   },
 });
 
-module.exports = { upload, UPLOAD_DIR, isAllowedImage, normalizeMime };
+module.exports = {
+  upload,
+  UPLOAD_DIR,
+  isAllowedImage,
+  normalizeMime,
+  buildFilename,
+};

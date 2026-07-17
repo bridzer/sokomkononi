@@ -277,8 +277,28 @@ Railway's build system (Railpack) needs to know this is a Node app deployable fr
 
    `PORT` is provided by Railway — do **not** set it manually.
 
-5. **Persistent uploads** — Railway containers have an ephemeral filesystem. Add a Volume so uploaded images survive redeploys:
-   - Service → *Volumes* → *New Volume* → mount path `/app/server/uploads`.
+5. **Persistent uploads (required)** — Railway containers wipe the filesystem on every deploy. Pick **one**:
+
+   **Option A — Railway Volume (simplest, no extra service):**
+   - Web service → **Volumes** → **New Volume**
+   - Mount path: **`/app/server/uploads`**
+   - Add variable: `UPLOAD_DIR=/app/server/uploads`
+   - Redeploy, then re-upload images **once** — they will survive future deploys
+
+   **Option B — Cloudflare R2 / S3 (best for production):**
+   ```env
+   STORAGE_TYPE=s3
+   S3_BUCKET=kalro-uploads
+   S3_REGION=auto
+   S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+   S3_ACCESS_KEY_ID=...
+   S3_SECRET_ACCESS_KEY=...
+   S3_PUBLIC_BASE_URL=https://pub-xxxx.r2.dev
+   S3_FORCE_PATH_STYLE=true
+   ```
+   New uploads get permanent `https://…` URLs in the database. Old `/uploads/…` paths still work if files exist on disk.
+
+   After deploy, check **`GET /api/health`** — the `uploads` section shows whether storage is persistent. If you see a warning, uploads will be lost on the next deploy.
 
 6. **Deploy** — Railway will now:
    - Run the `buildCommand` from `railway.json`:
@@ -305,7 +325,7 @@ Railway's build system (Railpack) needs to know this is a Node app deployable fr
 - **"No start command"** — Ensure `railway.json` is at the repo root and committed. Alternatively, in the service *Settings*, set the *Build Command* and *Start Command* manually with the same values.
 - **`DATABASE_URL` not set** — Verify the PG plugin is attached to *this* service (Variables tab should show `DATABASE_URL`).
 - **`client/build not found`** — The build step didn't run. Check the *Build logs* for the client build output.
-- **Images disappear after redeploy** — You skipped the Volume; add one mounted at `/app/server/uploads`.
+- **Images disappear after redeploy** — Uploads were stored on ephemeral disk. Add a Railway Volume at `/app/server/uploads` with `UPLOAD_DIR=/app/server/uploads`, **or** set `STORAGE_TYPE=s3` with R2/S3 credentials. Check `/api/health` → `uploads.persistent` should be `true`. You only need to re-upload once after fixing storage.
 
 ## License
 

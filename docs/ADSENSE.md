@@ -38,6 +38,29 @@ Copy from `client/.env.example` into `client/.env`:
 
 Restart `npm start` or redeploy after changing env vars (CRA bakes them at build time).
 
+## AdSense site verification
+
+Google's crawler reads **static HTML** — it does not run React. Verification requires:
+
+1. `REACT_APP_ADSENSE_CLIENT` set on Railway **before** deploy
+2. The build runs `prebuild` → injects the script + meta tag into `index.html`
+3. `public/ads.txt` is generated at `https://yoursite.com/ads.txt`
+
+After deploy, confirm in browser (View Page Source):
+
+```html
+<meta name="google-adsense-account" content="ca-pub-…" />
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-…">
+```
+
+Also check: `https://yoursite.com/ads.txt` loads and shows your `pub-…` id.
+
+If script verification fails, use the **meta tag** method in AdSense and set:
+
+`REACT_APP_GOOGLE_SITE_VERIFICATION=your-code-from-adsense`
+
+Then redeploy.
+
 ## Enabling ads locally
 
 1. Set env vars in `client/.env`
