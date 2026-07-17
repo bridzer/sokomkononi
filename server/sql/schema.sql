@@ -142,3 +142,30 @@ CREATE TABLE IF NOT EXISTS settings (
   about             TEXT,
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Payment settings (admin toggle — secrets stay in server env vars)
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS loop_payments_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Order payment tracking
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(24) NOT NULL DEFAULT 'cod';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(24) NOT NULL DEFAULT 'unpaid';
+
+-- Payment gateway transaction log (Loop callbacks, idempotency)
+CREATE TABLE IF NOT EXISTS payment_transactions (
+  id               SERIAL PRIMARY KEY,
+  order_id         INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  provider         VARCHAR(32) NOT NULL DEFAULT 'loop',
+  reference        VARCHAR(64) NOT NULL,
+  external_id      VARCHAR(128),
+  amount           NUMERIC(12,2) NOT NULL,
+  currency         VARCHAR(8) NOT NULL DEFAULT 'KES',
+  status           VARCHAR(24) NOT NULL DEFAULT 'pending'
+                   CHECK (status IN ('pending','completed','failed','cancelled')),
+  callback_payload JSONB,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_transactions_reference ON payment_transactions(reference);
+CREATE INDEX IF NOT EXISTS idx_payment_transactions_order ON payment_transactions(order_id);
+CREATE INDEX IF NOT EXISTS idx_orders_payment_status ON orders(payment_status);

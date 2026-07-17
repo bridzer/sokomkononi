@@ -23,6 +23,7 @@ import AdminProducts from './pages/admin/Products';
 import AdminCategories from './pages/admin/Categories';
 import AdminOrders from './pages/admin/Orders';
 import AdminMessages from './pages/admin/Messages';
+import AdminSettings from './pages/admin/Settings';
 
 export default function App() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="categories" element={<AdminCategories />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="messages" element={<AdminMessages />} />
+        <Route path="settings" element={<AdminSettings />} />
       </Route>
     </Routes>
   );

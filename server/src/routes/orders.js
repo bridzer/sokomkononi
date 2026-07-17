@@ -26,7 +26,10 @@ router.post('/', async (req, res, next) => {
       notes,
       items,
       user_id,
+      payment_method: paymentMethodRaw,
     } = req.body || {};
+
+    const payment_method = paymentMethodRaw === 'loop' ? 'loop' : 'cod';
 
     if (!customer_name || !customer_phone || !delivery_address) {
       return res
@@ -36,6 +39,20 @@ router.post('/', async (req, res, next) => {
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'items must be a non-empty array' });
     }
+
+    if (payment_method === 'loop') {
+      const settingsRes = await query(
+        'SELECT loop_payments_enabled FROM settings ORDER BY id ASC LIMIT 1'
+      );
+      const loopEnabled = settingsRes.rows[0]?.loop_payments_enabled;
+      const loopPayment = require('../services/loopPayment');
+      if (!loopEnabled || !loopPayment.isConfigured()) {
+        return res.status(400).json({ error: 'Loop payments are not available' });
+      }
+    }
+
+    const initialPaymentStatus = payment_method === 'loop' ? 'pending' : 'unpaid';
+    const initialOrderStatus = 'pending';
 
     await client.query('BEGIN');
 
@@ -77,8 +94,8 @@ router.post('/', async (req, res, next) => {
     const orderRes = await client.query(
       `INSERT INTO orders
         (order_number, user_id, customer_name, customer_phone, customer_email,
-         delivery_address, county, notes, total_amount, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending')
+         delivery_address, county, notes, total_amount, status, payment_method, payment_status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
        RETURNING *`,
       [
         orderNumber,
@@ -90,6 +107,9 @@ router.post('/', async (req, res, next) => {
         county || null,
         notes || null,
         total,
+        initialOrderStatus,
+        payment_method,
+        initialPaymentStatus,
       ]
     );
     const order = orderRes.rows[0];
@@ -105,7 +125,50 @@ router.post('/', async (req, res, next) => {
     await client.query('COMMIT');
 
     const itemsRes = await query('SELECT * FROM order_items WHERE order_id=$1', [order.id]);
-    res.status(201).json({ order: { ...order, items: itemsRes.rows } });
+
+    let paymentInit = null;
+    if (payment_method === 'loop') {
+      try {
+        const loopPayment = require('../services/loopPayment');
+        paymentInit = await loopPayment.initiatePayment({ order, phone: customer_phone });
+        await query(
+          `INSERT INTO payment_transactions
+            (order_id, provider, reference, external_id, amount, currency, status, callback_payload)
+           VALUES ($1, 'loop', $2, $3, $4, 'KES', 'pending', $5::jsonb)
+           ON CONFLICT (reference) DO NOTHING`,
+          [
+            order.id,
+            order.order_number,
+            paymentInit.checkoutRequestId || paymentInit.merchantRequestId,
+            order.total_amount,
+            JSON.stringify({ initiate: paymentInit.raw }),
+          ]
+        );
+      } catch (payErr) {
+        console.error('[orders] Loop initiate failed:', payErr.message);
+        await query(
+          `UPDATE orders SET payment_status = 'failed', updated_at = NOW() WHERE id = $1`,
+          [order.id]
+        );
+        return res.status(502).json({
+          error: payErr.expose ? payErr.message : 'Could not initiate Loop payment',
+          order: { ...order, items: itemsRes.rows, payment_status: 'failed' },
+        });
+      }
+    }
+
+    res.status(201).json({
+      order: { ...order, items: itemsRes.rows },
+      payment:
+        payment_method === 'loop' && paymentInit
+          ? {
+              status: 'pending',
+              customerMessage: paymentInit.customerMessage,
+              checkoutRequestId: paymentInit.checkoutRequestId,
+              redirectUrl: paymentInit.redirectUrl,
+            }
+          : null,
+    });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     next(err);

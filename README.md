@@ -231,6 +231,34 @@ NODE_ENV=production npm start
 
 Alternatively, deploy the frontend to a static host (Vercel/Netlify) and the backend elsewhere — set `REACT_APP_API_URL` on the frontend and `CLIENT_URL` on the backend.
 
+## Loop payments
+
+Loop integration uses the [Loop sandbox API](https://sandbox.loop.co.ke/devportal/docs/loop-api/introduction) (WSO2 APIM).
+
+### Server env vars (Railway — never expose to client)
+
+| Variable | Description |
+|----------|-------------|
+| `APP_BASE_URL` | Public site URL, e.g. `https://kalro.store` |
+| `LOOP_API_BASE_URL` | `https://sandbox.loop.co.ke` (or production URL) |
+| `LOOP_CLIENT_ID` | From Loop developer portal |
+| `LOOP_CLIENT_SECRET` | From Loop developer portal |
+| `LOOP_WEBHOOK_SECRET` | Optional — enables HMAC callback verification |
+| `LOOP_PAYMENT_INIT_PATH` | Default `/loop-api/1.0.0/payments/initiate` |
+
+### Enable in admin
+
+1. Set env vars and redeploy
+2. Admin → **Settings** → enable **Loop payments**
+3. Register callback URL in Loop portal: `https://kalro.store/api/payments/loop/callback`
+
+### Checkout flow
+
+- **Pay on delivery** — existing manual order flow
+- **Pay with Loop** — creates order, initiates mobile payment prompt, webhook confirms payment
+
+---
+
 ## Deploying to Railway
 
 Railway's build system (Railpack) needs to know this is a Node app deployable from the repo root. The included `railway.json` handles that. Steps:

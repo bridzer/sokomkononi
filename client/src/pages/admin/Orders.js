@@ -83,6 +83,11 @@ export default function AdminOrders() {
                     <div className="text-right shrink-0">
                       <div className="font-bold text-brand-700">{formatKsh(o.total_amount)}</div>
                       <span className={`badge ${statusColor[o.status]} mt-1`}>{o.status}</span>
+                      {o.payment_method === 'loop' ? (
+                        <span className="badge bg-indigo-100 text-indigo-800 mt-1 ml-1">
+                          {o.payment_status || 'unpaid'}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   <div className="text-[11px] text-slate-400 mt-2">

@@ -22,6 +22,8 @@ const orderRoutes = require('./routes/orders');
 const contactRoutes = require('./routes/contact');
 const adminRoutes = require('./routes/admin');
 const settingsRoutes = require('./routes/settings');
+const paymentRoutes = require('./routes/payments');
+const { handleLoopCallback } = require('./routes/payments');
 const errorHandler = require('./middleware/error');
 const { registerAdsenseRoutes } = require('./utils/adsenseServe');
 
@@ -90,6 +92,13 @@ app.use(
   })
 );
 
+// Loop webhook — MUST be before express.json() so we receive raw body for signature verification
+app.post(
+  '/api/payments/loop/callback',
+  express.raw({ type: 'application/json', limit: '256kb' }),
+  handleLoopCallback
+);
+
 app.use(express.json({ limit: '2mb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'tiny' : 'dev'));
 
@@ -141,6 +150,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 
 // --- Production: serve the built React app from client/build ---

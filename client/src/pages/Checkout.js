@@ -1,4 +1,4 @@
-import React, { useState, Fragment } from 'react';
+import React, { useEffect, useState, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
@@ -20,6 +20,8 @@ export default function Checkout() {
   const { items, total, clear } = useCart();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState([{ id: 'cod', label: 'Pay on delivery' }]);
+  const [paymentMethod, setPaymentMethod] = useState('cod');
   const [form, setForm] = useState({
     customer_name: '',
     customer_phone: '',
@@ -28,6 +30,19 @@ export default function Checkout() {
     county: '',
     notes: '',
   });
+
+  useEffect(() => {
+    api
+      .get('/payments/options')
+      .then((r) => {
+        const methods = r.data.methods || [{ id: 'cod', label: 'Pay on delivery' }];
+        setPaymentMethods(methods);
+        if (methods.some((m) => m.id === 'loop')) {
+          // keep cod default unless only loop available
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   if (items.length === 0) {
     return (
@@ -50,13 +65,20 @@ export default function Checkout() {
     try {
       const payload = {
         ...form,
+        payment_method: paymentMethod,
         items: items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
       };
       const { data } = await api.post('/orders', payload);
-      toast.success('Order placed! Redirecting…');
+
+      if (paymentMethod === 'loop' && data.payment) {
+        toast.success(data.payment.customerMessage || 'Check your phone to complete payment');
+      } else {
+        toast.success('Order placed!');
+      }
+
       clear();
       navigate(`/order-success/${data.order.order_number}`, {
-        state: { order: data.order },
+        state: { order: data.order, payment: data.payment },
       });
     } catch (err) {
       const msg = err.response?.data?.error || 'Could not place order';
@@ -141,9 +163,51 @@ export default function Checkout() {
             />
           </div>
 
+          <div>
+            <span className="label">Payment method *</span>
+            <div className="space-y-2 mt-1">
+              {paymentMethods.map((m) => (
+                <label
+                  key={m.id}
+                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    paymentMethod === m.id
+                      ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-300'
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="payment_method"
+                    value={m.id}
+                    checked={paymentMethod === m.id}
+                    onChange={() => setPaymentMethod(m.id)}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="font-medium text-slate-800 block">{m.label}</span>
+                    {m.description ? (
+                      <span className="text-sm text-slate-500">{m.description}</span>
+                    ) : null}
+                  </span>
+                </label>
+              ))}
+            </div>
+            {paymentMethod === 'loop' ? (
+              <p className="text-xs text-slate-500 mt-2">
+                You will receive a Loop payment prompt on{' '}
+                <strong>{form.customer_phone || 'your phone'}</strong>. Complete payment to confirm
+                your order.
+              </p>
+            ) : null}
+          </div>
+
           <div className="pt-2 flex flex-col sm:flex-row gap-3">
             <button className="btn-primary flex-1" type="submit" disabled={submitting}>
-              {submitting ? 'Placing order…' : 'Place order'}
+              {submitting
+                ? 'Processing…'
+                : paymentMethod === 'loop'
+                ? 'Place order & pay with Loop'
+                : 'Place order'}
             </button>
             <WhatsAppButton
               message={waMessage}

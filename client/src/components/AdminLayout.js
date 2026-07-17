@@ -8,6 +8,7 @@ const links = [
   { to: '/admin/categories', label: 'Categories' },
   { to: '/admin/orders', label: 'Orders' },
   { to: '/admin/messages', label: 'Messages' },
+  { to: '/admin/settings', label: 'Settings' },
 ];
 
 export default function AdminLayout() {
