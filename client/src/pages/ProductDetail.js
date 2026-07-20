@@ -6,6 +6,7 @@ import { formatProductPrice } from '../utils/pricing';
 import { useCart } from '../context/CartContext';
 import WhatsAppButton from '../components/WhatsAppButton';
 import SafeImage, { DEFAULT_FALLBACK } from '../components/SafeImage';
+import { buildProductShareText, getProductPageUrl, toAbsoluteUrl } from '../utils/share';
 
 const FALLBACK_IMG = DEFAULT_FALLBACK;
 
@@ -44,6 +45,39 @@ export default function ProductDetail() {
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  useEffect(() => {
+    if (!product) return undefined;
+
+    const prevTitle = document.title;
+    document.title = `${product.name} | Kalro Farm Kenya`;
+
+    const pageUrl = getProductPageUrl(product.slug);
+    const description = buildProductShareText(product);
+    const imageUrl = toAbsoluteUrl(product.image_url);
+
+    const setMeta = (attr, key, content) => {
+      if (!content) return;
+      let el = document.querySelector(`meta[${attr}="${key}"]`);
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute(attr, key);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
+    };
+
+    setMeta('property', 'og:title', document.title);
+    setMeta('property', 'og:description', description);
+    setMeta('property', 'og:url', pageUrl);
+    setMeta('property', 'og:type', 'product');
+    if (imageUrl) setMeta('property', 'og:image', imageUrl);
+    setMeta('name', 'description', description);
+
+    return () => {
+      document.title = prevTitle;
+    };
+  }, [product]);
 
   const images = useMemo(() => collectImages(product), [product]);
   const hasGallery = images.length > 1;

@@ -26,6 +26,11 @@ const paymentRoutes = require('./routes/payments');
 const { handleLoopCallback } = require('./routes/payments');
 const errorHandler = require('./middleware/error');
 const { registerAdsenseRoutes } = require('./utils/adsenseServe');
+const {
+  fetchProductForShare,
+  getSiteBaseUrl,
+  injectProductShareTags,
+} = require('./utils/productShare');
 const { getStorage } = require('./storage');
 
 const app = express();
@@ -196,6 +201,28 @@ if (clientBuildExists) {
       },
     })
   );
+
+  // Product pages — inject Open Graph tags for Facebook / social crawlers
+  app.get('/product/:slug', async (req, res, next) => {
+    try {
+      const html = loadIndexHtml();
+      if (!html) {
+        return res.status(500).send('App build missing index.html');
+      }
+
+      const product = await fetchProductForShare(req.params.slug);
+      if (product) {
+        const enriched = injectProductShareTags(html, product, getSiteBaseUrl(req));
+        res.set('Cache-Control', 'no-cache');
+        return res.type('html').send(enriched);
+      }
+
+      res.set('Cache-Control', 'no-cache');
+      return res.type('html').send(html);
+    } catch (err) {
+      next(err);
+    }
+  });
 
   // SPA fallback with AdSense verification tags injected from env vars
   app.get(/^\/(?!api\/|uploads\/).*/, (_req, res) => {

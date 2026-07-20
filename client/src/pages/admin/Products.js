@@ -11,6 +11,7 @@ import {
 import SafeImage, { DEFAULT_FALLBACK } from '../../components/SafeImage';
 import MultiImageUpload from '../../components/MultiImageUpload';
 import PriceFields from '../../components/PriceFields';
+import ShareProductMenu from '../../components/ShareProductMenu';
 
 const empty = {
   id: null,
@@ -150,7 +151,7 @@ export default function AdminProducts() {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
+      <div className="card overflow-visible">
         {loading ? (
           <div className="p-6 text-slate-500 text-center">Loading…</div>
         ) : products.length === 0 ? (
@@ -206,6 +207,7 @@ export default function AdminProducts() {
                       >
                         Edit
                       </button>
+                      <ShareProductMenu product={p} className="flex-1" compact />
                       <button
                         type="button"
                         className="btn-ghost flex-1 text-sm py-2 text-red-600 hover:bg-red-50"
@@ -220,7 +222,7 @@ export default function AdminProducts() {
             </div>
 
             {/* Desktop table */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto rounded-b-xl">
               <table className="w-full text-sm">
               <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
                 <tr>
@@ -275,10 +277,11 @@ export default function AdminProducts() {
                         <span className="badge bg-accent-500 text-white ml-1">Featured</span>
                       )}
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="p-3 text-right whitespace-nowrap">
                       <button className="text-brand-700 hover:underline mr-3" onClick={() => openEdit(p)}>
                         Edit
                       </button>
+                      <ShareProductMenu product={p} className="inline-block mr-3" compact />
                       <button className="text-red-600 hover:underline" onClick={() => remove(p.id)}>
                         Delete
                       </button>
