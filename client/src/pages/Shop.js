@@ -5,6 +5,7 @@ import api from '../api/client';
 import ProductListingGrid from '../components/ProductListingGrid';
 import { categoryIcon } from '../utils/categoryIcon';
 import { copyText } from '../utils/format';
+import { trackSearch } from '../utils/analytics';
 
 // ---------- Inline SVG icons ----------
 const SearchIcon = (p) => (
@@ -91,6 +92,10 @@ export default function Shop() {
       .then((r) => setProducts(r.data.products || []))
       .finally(() => setLoading(false));
   }, [categorySlug, search, sort]);
+
+  useEffect(() => {
+    if (search) trackSearch(search);
+  }, [search]);
 
   const activeCategory = useMemo(
     () => categories.find((c) => c.slug === categorySlug) || null,

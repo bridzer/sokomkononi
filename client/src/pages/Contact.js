@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../api/client';
 import { BUSINESS, PHONE_NUMBERS, WHATSAPP_NUMBERS, whatsappUrl } from '../utils/format';
+import { trackGenerateLead } from '../utils/analytics';
 
 export default function Contact() {
   const [form, setForm] = useState({ name: '', phone: '', email: '', subject: '', message: '' });
@@ -17,6 +18,7 @@ export default function Contact() {
     setSubmitting(true);
     try {
       await api.post('/contact', form);
+      trackGenerateLead('contact_form');
       toast.success('Message sent — we will get back to you shortly.');
       setForm({ name: '', phone: '', email: '', subject: '', message: '' });
     } catch (err) {

@@ -270,6 +270,33 @@ If OAuth succeeds but payment returns **401**, subscribe your application to the
 
 ---
 
+## Google Analytics (GA4)
+
+Tracks page views, ecommerce (cart, checkout, purchases), product views, search, contact leads, WhatsApp clicks, and shares. Admin routes are excluded.
+
+### Client env vars (Railway — rebuild required)
+
+| Variable | Description |
+|----------|-------------|
+| `REACT_APP_GA_ENABLED` | `true` to enable tracking |
+| `REACT_APP_GA_MEASUREMENT_ID` | GA4 Measurement ID (`G-XXXXXXXXXX`) |
+| `REACT_APP_GA_ANONYMIZE_IP` | `true` (default) — anonymize IPs in reports |
+| `REACT_APP_GA_DEBUG` | `true` — send events to GA DebugView |
+| `REACT_APP_GA_BUSINESS_NAME` | Custom user property on all events |
+| `REACT_APP_GA_SITE_NAME` | Site label attached to page views |
+| `REACT_APP_GA_CURRENCY` | Ecommerce currency (default `KES`) |
+
+### Server env vars (optional — early gtag load without rebuild)
+
+| Variable | Description |
+|----------|-------------|
+| `GA_ENABLED` | `true` — inject gtag in served HTML |
+| `GA_MEASUREMENT_ID` | Same as `REACT_APP_GA_MEASUREMENT_ID` |
+
+Set both client and server vars on Railway, redeploy, then verify in [GA4 Realtime](https://analytics.google.com/) while browsing the site.
+
+---
+
 ## Deploying to Railway
 
 Railway's build system (Railpack) needs to know this is a Node app deployable from the repo root. The included `railway.json` handles that. Steps:

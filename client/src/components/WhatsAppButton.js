@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { WHATSAPP_NUMBERS, whatsappUrl } from '../utils/format';
+import { trackWhatsAppClick } from '../utils/analytics';
 
 const POPOVER_WIDTH = 288;   // matches Tailwind's w-72 (18rem @ 16px root)
 const GAP = 8;               // px between trigger and popover
@@ -32,6 +33,7 @@ export default function WhatsAppButton({
   placement = 'bottom-end',
   title = 'Choose a line to chat on',
   onOpenChange,
+  analyticsContext = 'general',
 }) {
   const triggerRef = useRef(null);
   const popoverRef = useRef(null);
@@ -112,6 +114,7 @@ export default function WhatsAppButton({
         rel="noreferrer"
         className={className}
         aria-label="Chat on WhatsApp"
+        onClick={() => trackWhatsAppClick(analyticsContext)}
       >
         {children ?? <WaIcon className="w-4 h-4" />}
       </a>
@@ -158,7 +161,10 @@ export default function WhatsAppButton({
                   target="_blank"
                   rel="noreferrer"
                   role="menuitem"
-                  onClick={() => setOpen(false)}
+                  onClick={() => {
+                    trackWhatsAppClick(analyticsContext);
+                    setOpen(false);
+                  }}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors"
                 >
                   <span className="w-9 h-9 rounded-full bg-[#25D366] text-white grid place-items-center flex-shrink-0">

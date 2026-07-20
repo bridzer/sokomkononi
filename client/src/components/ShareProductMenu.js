@@ -9,6 +9,7 @@ import {
   twitterShareUrl,
   whatsAppShareUrl,
 } from '../utils/share';
+import { trackShare } from '../utils/analytics';
 
 export default function ShareProductMenu({ product, className = '', compact = false }) {
   const [open, setOpen] = useState(false);
@@ -38,6 +39,7 @@ export default function ShareProductMenu({ product, className = '', compact = fa
     }
     const result = await shareProduct(product);
     if (result.method === 'native') {
+      trackShare('product', product.id, 'native');
       toast.success('Shared');
     } else if (result.method === 'copy') {
       toast.success('Link copied — paste it on Facebook, WhatsApp, etc.');
@@ -51,15 +53,17 @@ export default function ShareProductMenu({ product, className = '', compact = fa
       return;
     }
     await copyText(pageUrl);
+    trackShare('product', product.id, 'copy_link');
     toast.success('Product link copied');
   };
 
-  const openShareWindow = (url) => {
+  const openShareWindow = (url, method) => {
     setOpen(false);
     if (!product.is_active) {
       toast.error('Activate this product before sharing it publicly.');
       return;
     }
+    trackShare('product', product.id, method);
     window.open(url, '_blank', 'noopener,noreferrer,width=600,height=520');
   };
 
@@ -99,7 +103,7 @@ export default function ShareProductMenu({ product, className = '', compact = fa
             type="button"
             role="menuitem"
             className={itemClass}
-            onClick={() => openShareWindow(facebookShareUrl(pageUrl))}
+            onClick={() => openShareWindow(facebookShareUrl(pageUrl), 'facebook')}
           >
             <span aria-hidden>📘</span>
             Facebook
@@ -108,7 +112,7 @@ export default function ShareProductMenu({ product, className = '', compact = fa
             type="button"
             role="menuitem"
             className={itemClass}
-            onClick={() => openShareWindow(whatsAppShareUrl(pageUrl, shareText))}
+            onClick={() => openShareWindow(whatsAppShareUrl(pageUrl, shareText), 'whatsapp')}
           >
             <span aria-hidden>💬</span>
             WhatsApp
@@ -117,7 +121,7 @@ export default function ShareProductMenu({ product, className = '', compact = fa
             type="button"
             role="menuitem"
             className={itemClass}
-            onClick={() => openShareWindow(twitterShareUrl(pageUrl, shareText))}
+            onClick={() => openShareWindow(twitterShareUrl(pageUrl, shareText), 'twitter')}
           >
             <span aria-hidden>🐦</span>
             X / Twitter

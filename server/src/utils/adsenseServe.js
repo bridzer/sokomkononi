@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { injectGoogleAnalytics } = require('./analyticsServe');
 
 const ADS_TXT_CERT = 'f08c47fec0942fa0';
 
@@ -74,7 +75,7 @@ function registerAdsenseRoutes(app, clientBuildDir) {
     if (!cachedIndexHtml) {
       cachedIndexHtml = fs.readFileSync(indexPath, 'utf8');
     }
-    return injectAdsenseVerification(cachedIndexHtml);
+    return injectGoogleAnalytics(injectAdsenseVerification(cachedIndexHtml));
   }
 
   app.get('/ads.txt', (_req, res) => {

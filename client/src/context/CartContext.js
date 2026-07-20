@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import { trackAddToCart, trackRemoveFromCart } from '../utils/analytics';
 
 const CartContext = createContext(null);
 const STORAGE_KEY = 'kalro_cart';
@@ -40,6 +41,7 @@ export function CartProvider({ children }) {
         },
       ];
     });
+    trackAddToCart(product, qty);
     toast.success(`${product.name} added to cart`);
   };
 
@@ -49,7 +51,11 @@ export function CartProvider({ children }) {
   };
 
   const removeItem = (product_id) => {
-    setItems((prev) => prev.filter((i) => i.product_id !== product_id));
+    setItems((prev) => {
+      const removed = prev.find((i) => i.product_id === product_id);
+      if (removed) trackRemoveFromCart(removed, removed.quantity);
+      return prev.filter((i) => i.product_id !== product_id);
+    });
   };
 
   const clear = () => setItems([]);

@@ -5,10 +5,13 @@ import Footer from './Footer';
 import WhatsAppFloat from './WhatsAppFloat';
 import MobileActionBar from './MobileActionBar';
 import useAdsense from '../hooks/useAdsense';
+import useAnalytics from '../hooks/useAnalytics';
 
 export default function PublicLayout() {
   // Load AdSense script once on eligible routes (shop/home). Excluded on cart/checkout/admin.
   useAdsense();
+  // GA4 — page views + interaction events on public routes only.
+  useAnalytics();
 
   return (
     <div className="min-h-screen flex flex-col bg-white">

@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext';
 import WhatsAppButton from '../components/WhatsAppButton';
 import SafeImage, { DEFAULT_FALLBACK } from '../components/SafeImage';
 import { buildProductShareText, getProductPageUrl, toAbsoluteUrl } from '../utils/share';
+import { trackViewItem } from '../utils/analytics';
 
 const FALLBACK_IMG = DEFAULT_FALLBACK;
 
@@ -73,6 +74,7 @@ export default function ProductDetail() {
     setMeta('property', 'og:type', 'product');
     if (imageUrl) setMeta('property', 'og:image', imageUrl);
     setMeta('name', 'description', description);
+    trackViewItem(product);
 
     return () => {
       document.title = prevTitle;
@@ -265,6 +267,7 @@ export default function ProductDetail() {
             message={orderWhatsAppMessage(product)}
             className="btn-whatsapp w-full mt-3"
             placement="top-start"
+            analyticsContext="product_detail"
           >
             <svg viewBox="0 0 32 32" className="w-5 h-5" fill="currentColor">
               <path d="M16 .5C7.4.5.5 7.4.5 16c0 2.8.8 5.5 2.2 7.8L.5 31.5l7.9-2.1c2.2 1.2 4.8 1.9 7.6 1.9 8.6 0 15.5-6.9 15.5-15.5S24.6.5 16 .5z" />

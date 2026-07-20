@@ -6,6 +6,7 @@ import { cartWhatsAppMessage, formatKsh, PHONE_NUMBERS } from '../utils/format';
 import { formatProductPrice } from '../utils/pricing';
 import api from '../api/client';
 import WhatsAppButton from '../components/WhatsAppButton';
+import { trackBeginCheckout, trackPurchase } from '../utils/analytics';
 
 const KENYA_COUNTIES = [
   'Nairobi','Mombasa','Kisumu','Nakuru','Uasin Gishu','Kiambu','Machakos','Kajiado',
@@ -44,6 +45,13 @@ export default function Checkout() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (items.length > 0) {
+      trackBeginCheckout(items, total);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (items.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16 text-center">
@@ -69,6 +77,8 @@ export default function Checkout() {
         items: items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
       };
       const { data } = await api.post('/orders', payload);
+
+      trackPurchase(data.order);
 
       if (paymentMethod === 'loop' && data.payment) {
         toast.success(data.payment.customerMessage || 'Check your phone to complete payment');
