@@ -16,6 +16,7 @@ import ShareProductMenu from '../../components/ShareProductMenu';
 const empty = {
   id: null,
   category_id: '',
+  seller_id: '',
   name: '',
   description: '',
   breed: '',
@@ -42,6 +43,7 @@ function coerceImages(product) {
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [sellers, setSellers] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
@@ -53,10 +55,12 @@ export default function AdminProducts() {
     Promise.all([
       api.get(`/admin/products?${params.toString()}`),
       api.get('/admin/categories'),
+      api.get('/admin/sellers'),
     ])
-      .then(([p, c]) => {
+      .then(([p, c, s]) => {
         setProducts(p.data.products || []);
         setCategories(c.data.categories || []);
+        setSellers(s.data.sellers || []);
       })
       .finally(() => setLoading(false));
   };
@@ -71,6 +75,7 @@ export default function AdminProducts() {
     setEditing({
       ...p,
       category_id: p.category_id || '',
+      seller_id: p.seller_id || '',
       images: coerceImages(p),
       ...pricingFromProduct(p),
     });
@@ -93,6 +98,7 @@ export default function AdminProducts() {
         ...pricing,
         stock: Number(editing.stock) || 0,
         category_id: editing.category_id ? Number(editing.category_id) : null,
+        seller_id: editing.seller_id ? Number(editing.seller_id) : null,
         images,
         image_url: images[0] || null,
       };
@@ -183,6 +189,7 @@ export default function AdminProducts() {
                         {p.breed && <div className="text-xs text-slate-500 mt-0.5">{p.breed}</div>}
                         <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
                           <span>{p.category_name || 'Uncategorised'}</span>
+                          <span>· {p.seller_display_name || p.seller_name || 'Kalro Farm Kenya'}</span>
                           {p.age_stage && <span>· {p.age_stage}</span>}
                           <span>· Stock: {p.stock}</span>
                         </div>
@@ -342,6 +349,22 @@ export default function AdminProducts() {
                   <option value="">— None —</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Seller</label>
+                <select
+                  className="input"
+                  value={editing.seller_id || ''}
+                  onChange={(e) => setEditing({ ...editing, seller_id: e.target.value })}
+                >
+                  <option value="">Kalro Farm Kenya (default)</option>
+                  {sellers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                      {s.location ? ` · ${s.location}` : ''}
+                    </option>
                   ))}
                 </select>
               </div>

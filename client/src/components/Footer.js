@@ -79,6 +79,9 @@ export default function Footer() {
             <li><Link to="/about" className="hover:text-white transition-colors">About us</Link></li>
             <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
             <li><Link to="/shop" className="hover:text-white transition-colors">All products</Link></li>
+            <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+            <li><Link to="/terms" className="hover:text-white transition-colors">Terms &amp; Conditions</Link></li>
+            <li><Link to="/account" className="hover:text-white transition-colors">My account</Link></li>
           </ul>
         </div>
 
@@ -140,8 +143,10 @@ export default function Footer() {
       <div className="border-t border-brand-800">
         <div className="max-w-7xl mx-auto px-4 py-4 text-[11px] sm:text-xs text-brand-200 flex flex-col sm:flex-row justify-between gap-2">
           <span>© {new Date().getFullYear()} Kalro Farm Kenya. All rights reserved.</span>
-          <span className="text-brand-200/80">
-            Guide book available · Disease-free · Fully vaccinated
+          <span className="text-brand-200/80 flex flex-wrap gap-x-3 gap-y-1">
+            <Link to="/privacy" className="hover:text-white">Privacy</Link>
+            <Link to="/terms" className="hover:text-white">Terms</Link>
+            <span>Delivery 3–7 working days</span>
           </span>
         </div>
       </div>

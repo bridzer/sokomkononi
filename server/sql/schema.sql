@@ -169,3 +169,60 @@ CREATE TABLE IF NOT EXISTS payment_transactions (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_transactions_reference ON payment_transactions(reference);
 CREATE INDEX IF NOT EXISTS idx_payment_transactions_order ON payment_transactions(order_id);
 CREATE INDEX IF NOT EXISTS idx_orders_payment_status ON orders(payment_status);
+
+-- Sellers (created by admin; products without a seller belong to Kalro Farm by default)
+CREATE TABLE IF NOT EXISTS sellers (
+  id          SERIAL PRIMARY KEY,
+  name        VARCHAR(160) NOT NULL,
+  phone       VARCHAR(32),
+  email       VARCHAR(160),
+  whatsapp    VARCHAR(32),
+  location    VARCHAR(200),
+  bio         TEXT,
+  is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sellers_active ON sellers(is_active);
+
+ALTER TABLE products ADD COLUMN IF NOT EXISTS seller_id INT REFERENCES sellers(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_products_seller ON products(seller_id);
+
+-- Delivery window on orders (working days)
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_min_days INT NOT NULL DEFAULT 3;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_max_days INT NOT NULL DEFAULT 7;
+CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
+
+-- Out-of-stock product bookings (interest / waitlist)
+CREATE TABLE IF NOT EXISTS product_bookings (
+  id              SERIAL PRIMARY KEY,
+  product_id      INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  customer_name   VARCHAR(160) NOT NULL,
+  customer_phone  VARCHAR(32) NOT NULL,
+  customer_email  VARCHAR(160),
+  quantity        INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  notes           TEXT,
+  status          VARCHAR(24) NOT NULL DEFAULT 'pending'
+                  CHECK (status IN ('pending','contacted','fulfilled','cancelled')),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_bookings_status ON product_bookings(status);
+CREATE INDEX IF NOT EXISTS idx_product_bookings_product ON product_bookings(product_id);
+
+-- Product reviews (public after admin approval)
+CREATE TABLE IF NOT EXISTS product_reviews (
+  id              SERIAL PRIMARY KEY,
+  product_id      INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  user_id         INT REFERENCES users(id) ON DELETE SET NULL,
+  customer_name   VARCHAR(160) NOT NULL,
+  rating          INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment         TEXT,
+  is_approved     BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_reviews_product ON product_reviews(product_id);
+CREATE INDEX IF NOT EXISTS idx_product_reviews_approved ON product_reviews(product_id, is_approved);

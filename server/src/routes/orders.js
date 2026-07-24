@@ -1,5 +1,11 @@
 const express = require('express');
 const { pool, query } = require('../db');
+const { requireAuth } = require('../middleware/auth');
+const {
+  DELIVERY_MIN_DAYS,
+  DELIVERY_MAX_DAYS,
+  deliveryLabel,
+} = require('../constants/delivery');
 
 const router = express.Router();
 
@@ -13,8 +19,8 @@ function genOrderNumber() {
   return `KF-${stamp}-${rand}`;
 }
 
-// Place order (guest or authenticated)
-router.post('/', async (req, res, next) => {
+// Place order — must be logged in; order is always assigned to the current user
+router.post('/', requireAuth, async (req, res, next) => {
   const client = await pool.connect();
   try {
     const {
@@ -25,11 +31,11 @@ router.post('/', async (req, res, next) => {
       county,
       notes,
       items,
-      user_id,
       payment_method: paymentMethodRaw,
     } = req.body || {};
 
     const payment_method = paymentMethodRaw === 'loop' ? 'loop' : 'cod';
+    const user_id = req.user.id;
 
     if (!customer_name || !customer_phone || !delivery_address) {
       return res
@@ -75,6 +81,22 @@ router.post('/', async (req, res, next) => {
         });
       }
       const qty = Math.max(1, Number(item.quantity) || 1);
+      if (Number(p.stock) <= 0) {
+        throw Object.assign(
+          new Error(
+            `"${p.name}" is out of stock. Please book it instead of ordering.`
+          ),
+          { status: 400, expose: true }
+        );
+      }
+      if (qty > Number(p.stock)) {
+        throw Object.assign(
+          new Error(
+            `Only ${p.stock} unit(s) of "${p.name}" available (you requested ${qty}).`
+          ),
+          { status: 400, expose: true }
+        );
+      }
       const unit = Number(p.price);
       const subtotal = unit * qty;
       const rangeNote =
@@ -94,12 +116,13 @@ router.post('/', async (req, res, next) => {
     const orderRes = await client.query(
       `INSERT INTO orders
         (order_number, user_id, customer_name, customer_phone, customer_email,
-         delivery_address, county, notes, total_amount, status, payment_method, payment_status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+         delivery_address, county, notes, total_amount, status, payment_method, payment_status,
+         delivery_min_days, delivery_max_days)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        RETURNING *`,
       [
         orderNumber,
-        user_id || null,
+        user_id,
         customer_name,
         customer_phone,
         customer_email || null,
@@ -110,6 +133,8 @@ router.post('/', async (req, res, next) => {
         initialOrderStatus,
         payment_method,
         initialPaymentStatus,
+        DELIVERY_MIN_DAYS,
+        DELIVERY_MAX_DAYS,
       ]
     );
     const order = orderRes.rows[0];
@@ -119,6 +144,10 @@ router.post('/', async (req, res, next) => {
         `INSERT INTO order_items (order_id, product_id, product_name, unit_price, quantity, subtotal)
          VALUES ($1,$2,$3,$4,$5,$6)`,
         [order.id, it.product_id, it.product_name, it.unit_price, it.quantity, it.subtotal]
+      );
+      await client.query(
+        `UPDATE products SET stock = GREATEST(0, stock - $1), updated_at = NOW() WHERE id = $2`,
+        [it.quantity, it.product_id]
       );
     }
 
@@ -161,7 +190,11 @@ router.post('/', async (req, res, next) => {
     }
 
     res.status(201).json({
-      order: { ...order, items: itemsRes.rows },
+      order: {
+        ...order,
+        items: itemsRes.rows,
+        delivery_label: deliveryLabel(order.delivery_min_days, order.delivery_max_days),
+      },
       payment:
         payment_method === 'loop' && paymentInit
           ? {
@@ -180,13 +213,52 @@ router.post('/', async (req, res, next) => {
   }
 });
 
+/** Authenticated customer: list my orders for tracking */
+router.get('/mine', requireAuth, async (req, res, next) => {
+  try {
+    const r = await query(
+      `SELECT id, order_number, total_amount, status, payment_method, payment_status,
+              delivery_address, county, delivery_min_days, delivery_max_days,
+              created_at, updated_at
+       FROM orders
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 100`,
+      [req.user.id]
+    );
+    const orders = await Promise.all(
+      r.rows.map(async (o) => {
+        const items = await query(
+          'SELECT product_name, quantity, unit_price, subtotal FROM order_items WHERE order_id=$1',
+          [o.id]
+        );
+        return {
+          ...o,
+          items: items.rows,
+          delivery_label: deliveryLabel(o.delivery_min_days, o.delivery_max_days),
+        };
+      })
+    );
+    res.json({ orders });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Public order lookup by order_number (for confirmation page)
 router.get('/lookup/:orderNumber', async (req, res, next) => {
   try {
     const o = await query('SELECT * FROM orders WHERE order_number=$1', [req.params.orderNumber]);
     if (!o.rowCount) return res.status(404).json({ error: 'Order not found' });
     const items = await query('SELECT * FROM order_items WHERE order_id=$1', [o.rows[0].id]);
-    res.json({ order: { ...o.rows[0], items: items.rows } });
+    const order = o.rows[0];
+    res.json({
+      order: {
+        ...order,
+        items: items.rows,
+        delivery_label: deliveryLabel(order.delivery_min_days, order.delivery_max_days),
+      },
+    });
   } catch (err) {
     next(err);
   }

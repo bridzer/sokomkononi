@@ -218,8 +218,12 @@ router.get('/products', async (req, res, next) => {
       params.push(Number(category_id));
       where.push(`p.category_id = $${params.length}`);
     }
-    const sql = `SELECT p.*, c.name AS category_name FROM products p
+    const sql = `SELECT p.*, c.name AS category_name,
+                        s.name AS seller_name,
+                        COALESCE(s.name, 'Kalro Farm Kenya') AS seller_display_name
+                 FROM products p
                  LEFT JOIN categories c ON c.id = p.category_id
+                 LEFT JOIN sellers s ON s.id = p.seller_id
                  ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
                  ORDER BY p.created_at DESC`;
     const r = await query(sql, params);
@@ -249,7 +253,7 @@ router.post('/products', async (req, res, next) => {
   try {
     const {
       category_id, name, description, breed, age_stage, unit,
-      stock, image_url, images: imagesInput, is_active, is_featured,
+      stock, image_url, images: imagesInput, is_active, is_featured, seller_id,
     } = req.body || {};
 
     if (!name) {
@@ -275,14 +279,15 @@ router.post('/products', async (req, res, next) => {
     const r = await query(
       `INSERT INTO products
         (category_id, name, slug, description, breed, age_stage, unit, price, price_type, price_max,
-         stock, image_url, images, is_active, is_featured)
+         stock, image_url, images, is_active, is_featured, seller_id)
        VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,'each'),$8,$9,$10,COALESCE($11,0),$12,$13::jsonb,
-               COALESCE($14,TRUE),COALESCE($15,FALSE))
+               COALESCE($14,TRUE),COALESCE($15,FALSE),$16)
        RETURNING *`,
       [
         category_id || null, name, slug, description || null, breed || null, age_stage || null,
         unit, pricing.price, pricing.price_type, pricing.price_max, stock, finalCover,
         JSON.stringify(finalImages), is_active, is_featured,
+        seller_id ? Number(seller_id) : null,
       ]
     );
     res.status(201).json({ product: r.rows[0] });
@@ -296,7 +301,7 @@ router.put('/products/:id', async (req, res, next) => {
     const {
       category_id, name, description, breed, age_stage, unit,
       stock, image_url, images: imagesInput, is_active, is_featured,
-      price_type,
+      price_type, seller_id,
     } = req.body || {};
 
     const hasPricingUpdate =
@@ -317,6 +322,10 @@ router.put('/products/:id', async (req, res, next) => {
     const { images: imgs, cover } = normalizeImages(imagesInput);
     const nextCover = hasImagesUpdate ? cover : (image_url ?? null);
     const nextImages = hasImagesUpdate ? JSON.stringify(imgs) : null;
+    const hasSellerUpdate = Object.prototype.hasOwnProperty.call(req.body || {}, 'seller_id');
+    const nextSellerId = hasSellerUpdate
+      ? (seller_id ? Number(seller_id) : null)
+      : undefined;
 
     const r = await query(
       `UPDATE products SET
@@ -334,8 +343,9 @@ router.put('/products/:id', async (req, res, next) => {
         images = COALESCE($14::jsonb, images),
         is_active = COALESCE($15, is_active),
         is_featured = COALESCE($16, is_featured),
+        seller_id = CASE WHEN $18::boolean THEN $17 ELSE seller_id END,
         updated_at = NOW()
-       WHERE id=$17 RETURNING *`,
+       WHERE id=$19 RETURNING *`,
       [
         category_id, name, description, breed, age_stage, unit,
         pricing?.price ?? null,
@@ -348,6 +358,8 @@ router.put('/products/:id', async (req, res, next) => {
         nextImages,
         is_active,
         is_featured,
+        nextSellerId ?? null,
+        hasSellerUpdate,
         req.params.id,
       ]
     );
@@ -442,6 +454,182 @@ router.delete('/messages/:id', async (req, res, next) => {
   try {
     const r = await query('DELETE FROM contact_messages WHERE id=$1 RETURNING id', [req.params.id]);
     if (!r.rowCount) return res.status(404).json({ error: 'Message not found' });
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --------- Sellers ---------
+router.get('/sellers', async (_req, res, next) => {
+  try {
+    const r = await query(
+      `SELECT s.*,
+              (SELECT COUNT(*)::int FROM products p WHERE p.seller_id = s.id) AS product_count
+       FROM sellers s
+       ORDER BY s.name ASC`
+    );
+    res.json({ sellers: r.rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/sellers', async (req, res, next) => {
+  try {
+    const { name, phone, email, whatsapp, location, bio, is_active } = req.body || {};
+    if (!name?.trim()) return res.status(400).json({ error: 'Seller name is required' });
+    const r = await query(
+      `INSERT INTO sellers (name, phone, email, whatsapp, location, bio, is_active)
+       VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,TRUE))
+       RETURNING *`,
+      [
+        name.trim(),
+        phone?.trim() || null,
+        email?.trim() || null,
+        whatsapp?.trim() || null,
+        location?.trim() || null,
+        bio?.trim() || null,
+        is_active,
+      ]
+    );
+    res.status(201).json({ seller: r.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/sellers/:id', async (req, res, next) => {
+  try {
+    const { name, phone, email, whatsapp, location, bio, is_active } = req.body || {};
+    const r = await query(
+      `UPDATE sellers SET
+         name = COALESCE($1, name),
+         phone = COALESCE($2, phone),
+         email = COALESCE($3, email),
+         whatsapp = COALESCE($4, whatsapp),
+         location = COALESCE($5, location),
+         bio = COALESCE($6, bio),
+         is_active = COALESCE($7, is_active),
+         updated_at = NOW()
+       WHERE id = $8
+       RETURNING *`,
+      [
+        name?.trim() || null,
+        phone !== undefined ? phone?.trim() || null : null,
+        email !== undefined ? email?.trim() || null : null,
+        whatsapp !== undefined ? whatsapp?.trim() || null : null,
+        location !== undefined ? location?.trim() || null : null,
+        bio !== undefined ? bio?.trim() || null : null,
+        is_active,
+        req.params.id,
+      ]
+    );
+    // Allow clearing nullable fields when explicitly sent as empty string
+    if (!r.rowCount) return res.status(404).json({ error: 'Seller not found' });
+    res.json({ seller: r.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/sellers/:id', async (req, res, next) => {
+  try {
+    // Products keep selling under Kalro Farm default (seller_id SET NULL via FK)
+    const r = await query('DELETE FROM sellers WHERE id=$1 RETURNING id', [req.params.id]);
+    if (!r.rowCount) return res.status(404).json({ error: 'Seller not found' });
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --------- Bookings (out-of-stock waitlist) ---------
+router.get('/bookings', async (req, res, next) => {
+  try {
+    const { status } = req.query;
+    const params = [];
+    let where = '';
+    if (status) {
+      params.push(status);
+      where = 'WHERE b.status = $1';
+    }
+    const r = await query(
+      `SELECT b.*, p.name AS product_name, p.slug AS product_slug, p.image_url AS product_image
+       FROM product_bookings b
+       LEFT JOIN products p ON p.id = b.product_id
+       ${where}
+       ORDER BY b.created_at DESC`,
+      params
+    );
+    res.json({ bookings: r.rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/bookings/:id/status', async (req, res, next) => {
+  try {
+    const { status } = req.body || {};
+    const allowed = ['pending', 'contacted', 'fulfilled', 'cancelled'];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ error: 'Invalid booking status' });
+    }
+    const r = await query(
+      `UPDATE product_bookings SET status=$1, updated_at=NOW() WHERE id=$2 RETURNING *`,
+      [status, req.params.id]
+    );
+    if (!r.rowCount) return res.status(404).json({ error: 'Booking not found' });
+    res.json({ booking: r.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --------- Reviews ---------
+router.get('/reviews', async (req, res, next) => {
+  try {
+    const { approved } = req.query;
+    const params = [];
+    let where = '';
+    if (approved === 'true') {
+      where = 'WHERE r.is_approved = TRUE';
+    } else if (approved === 'false') {
+      where = 'WHERE r.is_approved = FALSE';
+    }
+    const r = await query(
+      `SELECT r.*, p.name AS product_name, p.slug AS product_slug
+       FROM product_reviews r
+       LEFT JOIN products p ON p.id = r.product_id
+       ${where}
+       ORDER BY r.created_at DESC
+       LIMIT 200`,
+      params
+    );
+    res.json({ reviews: r.rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/reviews/:id/approve', async (req, res, next) => {
+  try {
+    const approved = req.body?.is_approved !== false;
+    const r = await query(
+      `UPDATE product_reviews SET is_approved=$1 WHERE id=$2 RETURNING *`,
+      [approved, req.params.id]
+    );
+    if (!r.rowCount) return res.status(404).json({ error: 'Review not found' });
+    res.json({ review: r.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/reviews/:id', async (req, res, next) => {
+  try {
+    const r = await query('DELETE FROM product_reviews WHERE id=$1 RETURNING id', [req.params.id]);
+    if (!r.rowCount) return res.status(404).json({ error: 'Review not found' });
     res.json({ success: true });
   } catch (err) {
     next(err);

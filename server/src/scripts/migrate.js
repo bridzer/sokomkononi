@@ -8,9 +8,13 @@ async function main() {
   if (mode === 'reset') {
     console.log('Dropping tables...');
     await pool.query(`
+      DROP TABLE IF EXISTS payment_transactions CASCADE;
+      DROP TABLE IF EXISTS product_reviews CASCADE;
+      DROP TABLE IF EXISTS product_bookings CASCADE;
       DROP TABLE IF EXISTS order_items CASCADE;
       DROP TABLE IF EXISTS orders CASCADE;
       DROP TABLE IF EXISTS products CASCADE;
+      DROP TABLE IF EXISTS sellers CASCADE;
       DROP TABLE IF EXISTS categories CASCADE;
       DROP TABLE IF EXISTS contact_messages CASCADE;
       DROP TABLE IF EXISTS settings CASCADE;

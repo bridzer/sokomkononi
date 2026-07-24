@@ -14,6 +14,11 @@ import Contact from './pages/Contact';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Account from './pages/Account';
 import NotFound from './pages/NotFound';
 
 // Admin pages
@@ -24,6 +29,10 @@ import AdminCategories from './pages/admin/Categories';
 import AdminOrders from './pages/admin/Orders';
 import AdminMessages from './pages/admin/Messages';
 import AdminSettings from './pages/admin/Settings';
+import AdminSellers from './pages/admin/Sellers';
+import AdminBookings from './pages/admin/Bookings';
+import AdminReviews from './pages/admin/Reviews';
+import AdminScripts from './pages/admin/Scripts';
 
 export default function App() {
   return (
@@ -35,6 +44,11 @@ export default function App() {
         <Route path="/product/:slug" element={<ProductDetail />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/account" element={<Account />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/order-success/:orderNumber" element={<OrderSuccess />} />
@@ -53,7 +67,11 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="products" element={<AdminProducts />} />
         <Route path="categories" element={<AdminCategories />} />
+        <Route path="sellers" element={<AdminSellers />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="bookings" element={<AdminBookings />} />
+        <Route path="reviews" element={<AdminReviews />} />
+        <Route path="scripts" element={<AdminScripts />} />
         <Route path="messages" element={<AdminMessages />} />
         <Route path="settings" element={<AdminSettings />} />
       </Route>

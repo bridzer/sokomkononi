@@ -22,6 +22,19 @@ function requireAdmin(req, res, next) {
   });
 }
 
+/** Attach req.user when a valid token is present; never fail the request. */
+function optionalAuth(req, _res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) return next();
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
+  } catch {
+    /* ignore invalid token for optional auth */
+  }
+  next();
+}
+
 function signToken(user) {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role, name: user.name },
@@ -30,4 +43,4 @@ function signToken(user) {
   );
 }
 
-module.exports = { requireAuth, requireAdmin, signToken };
+module.exports = { requireAuth, requireAdmin, optionalAuth, signToken };

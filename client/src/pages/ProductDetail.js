@@ -3,8 +3,13 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { orderWhatsAppMessage, PHONE_NUMBERS } from '../utils/format';
 import { formatProductPrice } from '../utils/pricing';
+import { deliveryLabel, getSellerDisplayName } from '../utils/delivery';
+import { pickScriptForProduct } from '../utils/whatsappScripts';
 import { useCart } from '../context/CartContext';
 import WhatsAppButton from '../components/WhatsAppButton';
+import ProductShareButton from '../components/ProductShareButton';
+import BookProductModal from '../components/BookProductModal';
+import ProductReviews from '../components/ProductReviews';
 import SafeImage, { DEFAULT_FALLBACK } from '../components/SafeImage';
 import { buildProductShareText, getProductPageUrl, toAbsoluteUrl } from '../utils/share';
 import { trackViewItem } from '../utils/analytics';
@@ -34,6 +39,7 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [bookOpen, setBookOpen] = useState(false);
   const { addItem } = useCart();
   const navigate = useNavigate();
 
@@ -102,6 +108,8 @@ export default function ProductDetail() {
     navigate('/cart');
   };
 
+  const outOfStock = Number(product.stock) === 0;
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="text-sm text-slate-500 mb-4">
@@ -122,6 +130,11 @@ export default function ProductDetail() {
         {/* --- Gallery --- */}
         <div>
           <div className="rounded-xl overflow-hidden bg-slate-100 aspect-[4/3] relative group">
+            <ProductShareButton
+              product={product}
+              variant="floating"
+              analyticsContext="product_detail_gallery"
+            />
             <SafeImage
               key={activeImage}
               src={activeImage}
@@ -191,13 +204,28 @@ export default function ProductDetail() {
               {product.category_name}
             </span>
           )}
-          <h1 className="text-3xl font-bold text-slate-800 mt-1">{product.name}</h1>
+          <div className="mt-1 flex items-start justify-between gap-3">
+            <h1 className="text-3xl font-bold text-slate-800">{product.name}</h1>
+            <ProductShareButton
+              product={product}
+              variant="pill"
+              className="shrink-0"
+              analyticsContext="product_detail"
+            />
+          </div>
           <div className="mt-2 flex items-center gap-3 flex-wrap">
             <div className="text-2xl sm:text-3xl font-extrabold text-brand-700">
               {formatProductPrice(product)}
             </div>
             <span className="text-sm text-slate-500">{product.unit}</span>
           </div>
+          <p className="mt-2 text-sm text-slate-600">
+            Sold by{' '}
+            <span className="font-semibold text-slate-800">{getSellerDisplayName(product)}</span>
+            {product.seller_location ? (
+              <span className="text-slate-500"> · {product.seller_location}</span>
+            ) : null}
+          </p>
 
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             {product.breed && (
@@ -214,13 +242,13 @@ export default function ProductDetail() {
             )}
             <div className="card p-3">
               <div className="text-slate-500 text-xs">Availability</div>
-              <div className={`font-medium ${product.stock > 0 ? 'text-brand-700' : 'text-red-600'}`}>
-                {product.stock > 0 ? `In stock (${product.stock})` : 'Out of stock'}
+              <div className={`font-medium ${outOfStock ? 'text-red-600' : 'text-brand-700'}`}>
+                {outOfStock ? 'Out of stock — book instead' : `In stock (${product.stock})`}
               </div>
             </div>
             <div className="card p-3">
               <div className="text-slate-500 text-xs">Delivery</div>
-              <div className="font-medium">Free countrywide</div>
+              <div className="font-medium">{deliveryLabel()} · Free countrywide</div>
             </div>
           </div>
 
@@ -228,43 +256,62 @@ export default function ProductDetail() {
             <p className="mt-4 text-slate-700 leading-relaxed">{product.description}</p>
           )}
 
-          <div className="mt-6 flex items-center gap-3">
-            <div className="flex items-center border border-slate-300 rounded-lg">
+          {outOfStock ? (
+            <div className="mt-6 space-y-3">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                This product is currently out of stock. Book your interest and we will contact you
+                on WhatsApp when it is available.
+              </div>
               <button
-                className="px-3 py-2 text-slate-600"
-                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                type="button"
+                onClick={() => setBookOpen(true)}
+                className="btn-primary w-full bg-amber-600 hover:bg-amber-700"
               >
-                −
-              </button>
-              <input
-                type="number"
-                min={1}
-                value={qty}
-                onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
-                className="w-14 text-center border-x border-slate-300 py-2 outline-none"
-              />
-              <button className="px-3 py-2 text-slate-600" onClick={() => setQty((q) => q + 1)}>
-                +
+                Book this product
               </button>
             </div>
-            <button
-              onClick={() => addItem(product, qty)}
-              disabled={product.stock === 0}
-              className="btn-outline flex-1 disabled:opacity-50"
-            >
-              Add to cart
-            </button>
-            <button
-              onClick={buyNow}
-              disabled={product.stock === 0}
-              className="btn-primary flex-1 disabled:opacity-50"
-            >
-              Buy now
-            </button>
-          </div>
+          ) : (
+            <div className="mt-6 flex items-center gap-3">
+              <div className="flex items-center border border-slate-300 rounded-lg">
+                <button
+                  className="px-3 py-2 text-slate-600"
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  max={product.stock}
+                  value={qty}
+                  onChange={(e) =>
+                    setQty(Math.min(product.stock, Math.max(1, Number(e.target.value) || 1)))
+                  }
+                  className="w-14 text-center border-x border-slate-300 py-2 outline-none"
+                />
+                <button
+                  className="px-3 py-2 text-slate-600"
+                  onClick={() => setQty((q) => Math.min(product.stock, q + 1))}
+                >
+                  +
+                </button>
+              </div>
+              <button
+                onClick={() => addItem(product, qty)}
+                className="btn-outline flex-1"
+              >
+                Add to cart
+              </button>
+              <button onClick={buyNow} className="btn-primary flex-1">
+                Buy now
+              </button>
+            </div>
+          )}
 
           <WhatsAppButton
-            message={orderWhatsAppMessage(product)}
+            message={
+              outOfStock ? pickScriptForProduct(product) : orderWhatsAppMessage(product)
+            }
             className="btn-whatsapp w-full mt-3"
             placement="top-start"
             analyticsContext="product_detail"
@@ -272,7 +319,7 @@ export default function ProductDetail() {
             <svg viewBox="0 0 32 32" className="w-5 h-5" fill="currentColor">
               <path d="M16 .5C7.4.5.5 7.4.5 16c0 2.8.8 5.5 2.2 7.8L.5 31.5l7.9-2.1c2.2 1.2 4.8 1.9 7.6 1.9 8.6 0 15.5-6.9 15.5-15.5S24.6.5 16 .5z" />
             </svg>
-            Order via WhatsApp
+            {outOfStock ? 'Ask about booking on WhatsApp' : 'Order via WhatsApp'}
           </WhatsAppButton>
 
           <div className="mt-4 text-sm text-slate-600">
@@ -288,6 +335,13 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
+
+      <ProductReviews productId={product.id} />
+      <BookProductModal
+        product={product}
+        open={bookOpen}
+        onClose={() => setBookOpen(false)}
+      />
     </div>
   );
 }

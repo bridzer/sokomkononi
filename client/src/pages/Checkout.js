@@ -2,8 +2,10 @@ import React, { useEffect, useState, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { cartWhatsAppMessage, formatKsh, PHONE_NUMBERS } from '../utils/format';
 import { formatProductPrice } from '../utils/pricing';
+import { deliveryLabel } from '../utils/delivery';
 import api from '../api/client';
 import WhatsAppButton from '../components/WhatsAppButton';
 import { trackBeginCheckout, trackPurchase } from '../utils/analytics';
@@ -19,6 +21,7 @@ const KENYA_COUNTIES = [
 
 export default function Checkout() {
   const { items, total, clear } = useCart();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([{ id: 'cod', label: 'Pay on delivery' }]);
@@ -31,6 +34,16 @@ export default function Checkout() {
     county: '',
     notes: '',
   });
+
+  useEffect(() => {
+    if (!user) return;
+    setForm((f) => ({
+      ...f,
+      customer_name: f.customer_name || user.name || '',
+      customer_email: f.customer_email || user.email || '',
+      customer_phone: f.customer_phone || user.phone || '',
+    }));
+  }, [user]);
 
   useEffect(() => {
     api
@@ -61,10 +74,57 @@ export default function Checkout() {
     );
   }
 
+  // Require login/register before placing an order
+  if (!user) {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-14">
+        <div className="card p-6 sm:p-8 text-center">
+          <div className="mx-auto w-12 h-12 rounded-full bg-brand-50 text-brand-700 grid place-items-center mb-4">
+            <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM4 21v-1a6 6 0 0112 0v1" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800">Sign in to checkout</h1>
+          <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+            Create an account or log in before placing your order so we can assign it to you and
+            you can track delivery status.
+          </p>
+          <p className="mt-3 text-sm font-medium text-slate-700">
+            {items.length} item{items.length === 1 ? '' : 's'} in cart · {formatKsh(total)}
+          </p>
+          <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              to="/login"
+              state={{ from: '/checkout' }}
+              className="btn-primary"
+            >
+              Log in
+            </Link>
+            <Link
+              to="/register"
+              state={{ from: '/checkout' }}
+              className="btn-outline"
+            >
+              Create account
+            </Link>
+          </div>
+          <Link to="/cart" className="inline-block mt-4 text-sm text-slate-500 hover:text-brand-700">
+            ← Back to cart
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const submit = async (e) => {
     e.preventDefault();
+    if (!user) {
+      toast.error('Please log in or create an account before placing an order');
+      navigate('/login', { state: { from: '/checkout' } });
+      return;
+    }
     if (!form.customer_name || !form.customer_phone || !form.delivery_address) {
       toast.error('Name, phone and delivery address are required');
       return;
@@ -91,6 +151,11 @@ export default function Checkout() {
         state: { order: data.order, payment: data.payment },
       });
     } catch (err) {
+      if (err.response?.status === 401) {
+        toast.error('Please log in again to place your order');
+        navigate('/login', { state: { from: '/checkout' } });
+        return;
+      }
       const msg = err.response?.data?.error || 'Could not place order';
       toast.error(msg);
     } finally {
@@ -228,13 +293,24 @@ export default function Checkout() {
             </WhatsAppButton>
           </div>
           <p className="text-xs text-slate-500">
-            By placing this order you agree to be contacted by Kalro Farm to confirm details.
-            Delivery is free countrywide.
+            By placing this order you agree to our{' '}
+            <Link to="/terms" className="text-brand-700 hover:underline">
+              Terms
+            </Link>
+            . Estimated delivery: <strong>{deliveryLabel()}</strong>. Delivery is free countrywide.
+            Signed in as <strong>{user.name}</strong> — this order will appear in{' '}
+            <Link to="/account" className="text-brand-700 font-semibold hover:underline">
+              My account
+            </Link>
+            .
           </p>
         </form>
 
         <aside className="card p-5 h-fit">
           <h2 className="font-semibold text-slate-800 mb-4">Your order</h2>
+          <p className="text-xs text-slate-500 mb-3">
+            Delivery window: <span className="font-semibold text-slate-700">{deliveryLabel()}</span>
+          </p>
           <div className="space-y-3 max-h-72 overflow-auto pr-1">
             {items.map((i) => (
               <div key={i.product_id} className="flex justify-between text-sm">

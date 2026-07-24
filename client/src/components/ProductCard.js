@@ -1,13 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatProductPrice, orderWhatsAppMessage } from '../utils/format';
 import { useCart } from '../context/CartContext';
+import { getSellerDisplayName } from '../utils/delivery';
+import { pickScriptForProduct } from '../utils/whatsappScripts';
 import WhatsAppButton from './WhatsAppButton';
-
+import ProductShareButton from './ProductShareButton';
+import BookProductModal from './BookProductModal';
 import SafeImage, { DEFAULT_FALLBACK } from './SafeImage';
 
 export default function ProductCard({ product }) {
   const { addItem } = useCart();
+  const [bookOpen, setBookOpen] = useState(false);
+  const outOfStock = Number(product.stock) === 0;
+
+  const actionCell =
+    'flex flex-col items-center justify-center gap-px w-full min-w-0 py-1 px-0.5 rounded-md font-semibold text-[9px] leading-tight shadow-sm active:scale-95 transition-transform';
+
   return (
     // NOTE: no `overflow-hidden` on the outer card — that would clip any
     // portal fallbacks and (previously) the WhatsAppButton popover. The
@@ -28,7 +37,7 @@ export default function ProductCard({ product }) {
             ★ Featured
           </span>
         )}
-        {product.stock === 0 ? (
+        {outOfStock ? (
           <span className="absolute top-2 right-2 badge bg-red-500 text-white shadow">
             Out of stock
           </span>
@@ -51,10 +60,11 @@ export default function ProductCard({ product }) {
         >
           {product.name}
         </Link>
+        <div className="text-[11px] text-slate-500 line-clamp-1">
+          Sold by {getSellerDisplayName(product)}
+        </div>
         {product.age_stage && (
-          <div className="text-xs text-slate-500 line-clamp-1">
-            {product.age_stage}
-          </div>
+          <div className="text-xs text-slate-500 line-clamp-1">{product.age_stage}</div>
         )}
 
         <div className="mt-auto pt-2 flex items-baseline gap-2 flex-wrap">
@@ -64,29 +74,54 @@ export default function ProductCard({ product }) {
           <div className="text-[11px] text-slate-500">/ {product.unit}</div>
         </div>
 
-        <div className="flex gap-2 mt-1">
-          <button
-            onClick={() => addItem(product)}
-            disabled={product.stock === 0}
-            className="btn-primary flex-1 min-w-0 text-sm py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.6 4h13.2M9 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" />
-            </svg>
-            <span className="truncate">Add to cart</span>
-          </button>
+        <div className="grid grid-cols-2 gap-1 mt-1">
+          {outOfStock ? (
+            <button
+              type="button"
+              onClick={() => setBookOpen(true)}
+              className={`${actionCell} bg-amber-600 hover:bg-amber-700 text-white`}
+            >
+              <svg viewBox="0 0 24 24" className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" />
+              </svg>
+              <span className="whitespace-nowrap">Book</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => addItem(product)}
+              className={`${actionCell} bg-slate-900 hover:bg-slate-800 text-white`}
+            >
+              <svg viewBox="0 0 24 24" className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.6 4h13.2M9 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z" />
+              </svg>
+              <span className="whitespace-nowrap">Add to Cart</span>
+            </button>
+          )}
+          
           <WhatsAppButton
-            message={orderWhatsAppMessage(product)}
-            className="btn-whatsapp text-sm py-2 px-3 shrink-0"
+            message={
+              outOfStock
+                ? pickScriptForProduct(product)
+                : orderWhatsAppMessage(product)
+            }
+            className={`${actionCell} !inline-flex !flex-col !gap-px !py-1 !px-0.5 !text-[9px] bg-[#25D366] hover:bg-[#1ebe57] text-white`}
             placement="bottom-end"
             title="Order via WhatsApp on"
           >
-            <svg viewBox="0 0 32 32" className="w-4 h-4" fill="currentColor" aria-hidden="true">
+            <svg viewBox="0 0 32 32" className="w-3 h-3 shrink-0" fill="currentColor" aria-hidden="true">
               <path d="M16 .5C7.4.5.5 7.4.5 16c0 2.8.8 5.5 2.2 7.8L.5 31.5l7.9-2.1c2.2 1.2 4.8 1.9 7.6 1.9 8.6 0 15.5-6.9 15.5-15.5S24.6.5 16 .5z" />
             </svg>
+            <span className="whitespace-nowrap">WhatsApp</span>
           </WhatsAppButton>
         </div>
       </div>
+
+      <BookProductModal
+        product={product}
+        open={bookOpen}
+        onClose={() => setBookOpen(false)}
+      />
     </div>
   );
 }

@@ -23,6 +23,8 @@ const contactRoutes = require('./routes/contact');
 const adminRoutes = require('./routes/admin');
 const settingsRoutes = require('./routes/settings');
 const paymentRoutes = require('./routes/payments');
+const bookingRoutes = require('./routes/bookings');
+const reviewRoutes = require('./routes/reviews');
 const { handleLoopCallback } = require('./routes/payments');
 const errorHandler = require('./middleware/error');
 const { registerAdsenseRoutes } = require('./utils/adsenseServe');
@@ -180,6 +182,8 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 
 // --- Production: serve the built React app from client/build ---

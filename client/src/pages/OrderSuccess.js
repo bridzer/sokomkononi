@@ -4,6 +4,8 @@ import api from '../api/client';
 import { cartWhatsAppMessage, formatKsh } from '../utils/format';
 import WhatsAppButton from '../components/WhatsAppButton';
 import PhoneButton from '../components/PhoneButton';
+import { deliveryLabel } from '../utils/delivery';
+import { useAuth } from '../context/AuthContext';
 
 const PAYMENT_LABELS = {
   cod: 'Pay on delivery',
@@ -17,6 +19,7 @@ const PAYMENT_LABELS = {
 export default function OrderSuccess() {
   const { orderNumber } = useParams();
   const location = useLocation();
+  const { user } = useAuth();
   const [order, setOrder] = useState(location.state?.order || null);
   const [loading, setLoading] = useState(!order);
   const initialPayment = location.state?.payment;
@@ -156,6 +159,15 @@ export default function OrderSuccess() {
               <span>Total</span>
               <span className="text-brand-700">{formatKsh(order.total_amount)}</span>
             </div>
+            <p className="text-sm text-slate-600 pt-2">
+              Estimated delivery:{' '}
+              <span className="font-semibold text-slate-800">
+                {order.delivery_label || deliveryLabel()}
+              </span>
+            </p>
+            <p className="text-xs text-slate-500 capitalize">
+              Status: {order.status}
+            </p>
           </div>
         </div>
 
@@ -166,6 +178,15 @@ export default function OrderSuccess() {
           <PhoneButton className="btn-outline" placement="top-center">
             Call our team
           </PhoneButton>
+          {user?.role === 'customer' ? (
+            <Link to="/account" className="btn-primary">
+              Track in My account
+            </Link>
+          ) : (
+            <Link to="/register" className="btn-outline">
+              Create account to track
+            </Link>
+          )}
           <Link to="/shop" className="btn-ghost">
             Continue shopping
           </Link>

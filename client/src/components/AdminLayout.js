@@ -6,7 +6,11 @@ const links = [
   { to: '/admin', label: 'Dashboard', end: true },
   { to: '/admin/products', label: 'Products' },
   { to: '/admin/categories', label: 'Categories' },
+  { to: '/admin/sellers', label: 'Sellers' },
   { to: '/admin/orders', label: 'Orders' },
+  { to: '/admin/bookings', label: 'Bookings' },
+  { to: '/admin/reviews', label: 'Reviews' },
+  { to: '/admin/scripts', label: 'WA Scripts' },
   { to: '/admin/messages', label: 'Messages' },
   { to: '/admin/settings', label: 'Settings' },
 ];
