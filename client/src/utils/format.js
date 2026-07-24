@@ -155,6 +155,43 @@ export const BUSINESS = {
   email: envStr('REACT_APP_BUSINESS_EMAIL') || 'info@kalro.store',
 };
 
+/**
+ * Social media profile links from env.
+ * Only entries with a non-empty URL are exposed.
+ */
+export const SOCIAL_LINKS = [
+  {
+    id: 'facebook',
+    label: 'Facebook',
+    url: envStr('REACT_APP_SOCIAL_FACEBOOK'),
+  },
+  {
+    id: 'instagram',
+    label: 'Instagram',
+    url: envStr('REACT_APP_SOCIAL_INSTAGRAM'),
+  },
+  {
+    id: 'twitter',
+    label: 'X (Twitter)',
+    url: envStr('REACT_APP_SOCIAL_TWITTER') || envStr('REACT_APP_SOCIAL_X'),
+  },
+  {
+    id: 'tiktok',
+    label: 'TikTok',
+    url: envStr('REACT_APP_SOCIAL_TIKTOK'),
+  },
+  {
+    id: 'youtube',
+    label: 'YouTube',
+    url: envStr('REACT_APP_SOCIAL_YOUTUBE'),
+  },
+  {
+    id: 'linkedin',
+    label: 'LinkedIn',
+    url: envStr('REACT_APP_SOCIAL_LINKEDIN'),
+  },
+].filter((s) => !!s.url);
+
 /** Google Maps embed settings (homepage location section). */
 export const MAP_CONFIG = {
   apiKey: envStr('REACT_APP_GOOGLE_MAPS_API_KEY'),

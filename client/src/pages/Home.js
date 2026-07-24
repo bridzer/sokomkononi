@@ -5,8 +5,8 @@ import WhatsAppButton from '../components/WhatsAppButton';
 import PhoneButton from '../components/PhoneButton';
 import SafeImage from '../components/SafeImage';
 import GoogleMapSection from '../components/GoogleMapSection';
+import HomeCategorySection from '../components/HomeCategorySection';
 import { BUSINESS } from '../utils/format';
-import Shop from './Shop';
 export default function Home() {
   
 
@@ -98,8 +98,7 @@ export default function Home() {
 
       {/* -------- Categories -------- */}
       <section className="max-w-7xl mx-auto px-4 py-8 sm:py-10 md:py-10">
-        <Shop />
-             
+        <HomeCategorySection />
       </section>
 
       {/* -------- Trust / Stats -------- */}

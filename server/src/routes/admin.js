@@ -148,7 +148,16 @@ router.get('/stats', async (_req, res, next) => {
 // --------- Categories CRUD ---------
 router.get('/categories', async (_req, res, next) => {
   try {
-    const r = await query('SELECT * FROM categories ORDER BY sort_order ASC, name ASC');
+    const r = await query(
+      `SELECT c.*,
+              p.name AS parent_name,
+              p.slug AS parent_slug,
+              (SELECT COUNT(*)::int FROM products pr WHERE pr.category_id = c.id) AS product_count
+       FROM categories c
+       LEFT JOIN categories p ON p.id = c.parent_id
+       ORDER BY c.parent_id NULLS FIRST, COALESCE(p.sort_order, c.sort_order) ASC,
+                c.sort_order ASC, c.name ASC`
+    );
     res.json({ categories: r.rows });
   } catch (err) {
     next(err);
@@ -157,13 +166,25 @@ router.get('/categories', async (_req, res, next) => {
 
 router.post('/categories', async (req, res, next) => {
   try {
-    const { name, description, image_url, sort_order, is_active } = req.body || {};
+    const { name, description, image_url, sort_order, is_active, parent_id } = req.body || {};
     if (!name) return res.status(400).json({ error: 'name is required' });
+
+    let parentId = parent_id ? Number(parent_id) : null;
+    if (parentId) {
+      const parent = await query(
+        'SELECT id FROM categories WHERE id=$1 AND parent_id IS NULL',
+        [parentId]
+      );
+      if (!parent.rowCount) {
+        return res.status(400).json({ error: 'parent_id must be a main (top-level) category' });
+      }
+    }
+
     const slug = slugify(name);
     const r = await query(
-      `INSERT INTO categories (name, slug, description, image_url, sort_order, is_active)
-       VALUES ($1,$2,$3,$4,$5,COALESCE($6, TRUE)) RETURNING *`,
-      [name, slug, description || null, image_url || null, sort_order || 0, is_active]
+      `INSERT INTO categories (name, slug, description, image_url, sort_order, is_active, parent_id)
+       VALUES ($1,$2,$3,$4,$5,COALESCE($6, TRUE),$7) RETURNING *`,
+      [name, slug, description || null, image_url || null, sort_order || 0, is_active, parentId]
     );
     res.status(201).json({ category: r.rows[0] });
   } catch (err) {
@@ -173,8 +194,26 @@ router.post('/categories', async (req, res, next) => {
 
 router.put('/categories/:id', async (req, res, next) => {
   try {
-    const { name, description, image_url, sort_order, is_active } = req.body || {};
+    const { name, description, image_url, sort_order, is_active, parent_id } = req.body || {};
     const slug = name ? slugify(name) : null;
+    const hasParentUpdate = Object.prototype.hasOwnProperty.call(req.body || {}, 'parent_id');
+    let nextParent = null;
+    if (hasParentUpdate) {
+      nextParent = parent_id ? Number(parent_id) : null;
+      if (nextParent) {
+        if (Number(nextParent) === Number(req.params.id)) {
+          return res.status(400).json({ error: 'A category cannot be its own parent' });
+        }
+        const parent = await query(
+          'SELECT id FROM categories WHERE id=$1 AND parent_id IS NULL',
+          [nextParent]
+        );
+        if (!parent.rowCount) {
+          return res.status(400).json({ error: 'parent_id must be a main (top-level) category' });
+        }
+      }
+    }
+
     const r = await query(
       `UPDATE categories SET
         name = COALESCE($1, name),
@@ -183,9 +222,20 @@ router.put('/categories/:id', async (req, res, next) => {
         image_url = COALESCE($4, image_url),
         sort_order = COALESCE($5, sort_order),
         is_active = COALESCE($6, is_active),
+        parent_id = CASE WHEN $8::boolean THEN $7 ELSE parent_id END,
         updated_at = NOW()
-       WHERE id = $7 RETURNING *`,
-      [name, slug, description, image_url, sort_order, is_active, req.params.id]
+       WHERE id = $9 RETURNING *`,
+      [
+        name,
+        slug,
+        description,
+        image_url,
+        sort_order,
+        is_active,
+        nextParent,
+        hasParentUpdate,
+        req.params.id,
+      ]
     );
     if (!r.rowCount) return res.status(404).json({ error: 'Category not found' });
     res.json({ category: r.rows[0] });
@@ -218,11 +268,13 @@ router.get('/products', async (req, res, next) => {
       params.push(Number(category_id));
       where.push(`p.category_id = $${params.length}`);
     }
-    const sql = `SELECT p.*, c.name AS category_name,
+    const sql = `SELECT p.*, c.name AS category_name, c.slug AS category_slug,
+                        pc.name AS parent_category_name, pc.slug AS parent_category_slug,
                         s.name AS seller_name,
                         COALESCE(s.name, 'Kalro Farm Kenya') AS seller_display_name
                  FROM products p
                  LEFT JOIN categories c ON c.id = p.category_id
+                 LEFT JOIN categories pc ON pc.id = c.parent_id
                  LEFT JOIN sellers s ON s.id = p.seller_id
                  ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
                  ORDER BY p.created_at DESC`;

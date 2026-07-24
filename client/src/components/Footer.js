@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BUSINESS, PHONE_NUMBERS, WHATSAPP_NUMBERS, whatsappUrl } from '../utils/format';
+import { BUSINESS, PHONE_NUMBERS, SOCIAL_LINKS, WHATSAPP_NUMBERS, whatsappUrl } from '../utils/format';
 
 function PhoneIcon() {
   return (
@@ -65,11 +65,11 @@ export default function Footer() {
         <div>
           <h4 className="text-white font-semibold mb-3 text-sm uppercase tracking-wider">Shop</h4>
           <ul className="space-y-2 text-sm">
-            <li><Link to="/shop/cattle" className="hover:text-white transition-colors">Dairy Cattle</Link></li>
-            <li><Link to="/shop/goats" className="hover:text-white transition-colors">Dairy Goats</Link></li>
-            <li><Link to="/shop/goats" className="hover:text-white transition-colors">Boer Goats</Link></li>
-            <li><Link to="/shop/poultry" className="hover:text-white transition-colors">Poultry</Link></li>
-            <li><Link to="/shop/eggs" className="hover:text-white transition-colors">Eggs</Link></li>
+            <li><Link to="/shop/livestock" className="hover:text-white transition-colors">Livestock</Link></li>
+            <li><Link to="/shop/crop-production" className="hover:text-white transition-colors">Crop Production</Link></li>
+            <li><Link to="/shop/horticulture" className="hover:text-white transition-colors">Horticulture</Link></li>
+            <li><Link to="/shop/agricultural-engineering" className="hover:text-white transition-colors">Farm Machinery</Link></li>
+            <li><Link to="/shop/soil-science-inputs" className="hover:text-white transition-colors">Inputs</Link></li>
           </ul>
         </div>
 
@@ -134,6 +134,21 @@ export default function Footer() {
                     <span className="text-brand-200/80">Email:</span> {BUSINESS.email}
                   </span>
                 </a>
+              </li>
+            )}
+            {SOCIAL_LINKS.length > 0 && (
+              <li className="pt-2 flex flex-wrap gap-2">
+                {SOCIAL_LINKS.map((s) => (
+                  <a
+                    key={s.id}
+                    href={s.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center rounded-full bg-white/10 hover:bg-white/20 px-3 py-1 text-xs font-semibold text-white transition-colors"
+                  >
+                    {s.label}
+                  </a>
+                ))}
               </li>
             )}
           </ul>

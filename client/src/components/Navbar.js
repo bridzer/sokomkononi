@@ -26,10 +26,10 @@ export default function Navbar() {
   const links = [
     { to: '/', label: 'Home' },
     { to: '/shop', label: 'Shop' },
-    { to: '/shop/cattle', label: 'Livestock' },
-    { to: '/shop/dairy-goats', label: 'Horticulture' },
-    { to: '/shop/poultry', label: 'Crop Production' },
-    { to: '/shop/poultry', label: 'Inputs/Machinary' },
+    { to: '/shop/livestock', label: 'Livestock' },
+    { to: '/shop/horticulture', label: 'Horticulture' },
+    { to: '/shop/crop-production', label: 'Crop Production' },
+    { to: '/shop/agricultural-engineering', label: 'Machinery' },
     { to: '/about', label: 'About' },
     { to: '/contact', label: 'Contact' },
   ];

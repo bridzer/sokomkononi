@@ -1,9 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../api/client';
 import ImageUpload from '../../components/ImageUpload';
 
-const empty = { id: null, name: '', description: '', image_url: '', sort_order: 0, is_active: true };
+const empty = {
+  id: null,
+  name: '',
+  description: '',
+  image_url: '',
+  sort_order: 0,
+  is_active: true,
+  parent_id: '',
+};
 
 export default function AdminCategories() {
   const [categories, setCategories] = useState([]);
@@ -20,14 +28,23 @@ export default function AdminCategories() {
 
   useEffect(load, []);
 
+  const mainCategories = useMemo(
+    () => categories.filter((c) => !c.parent_id),
+    [categories]
+  );
+
   const save = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...editing,
+        parent_id: editing.parent_id ? Number(editing.parent_id) : null,
+      };
       if (editing.id) {
-        await api.put(`/admin/categories/${editing.id}`, editing);
+        await api.put(`/admin/categories/${editing.id}`, payload);
         toast.success('Category updated');
       } else {
-        await api.post('/admin/categories', editing);
+        await api.post('/admin/categories', payload);
         toast.success('Category created');
       }
       setEditing(null);
@@ -38,7 +55,13 @@ export default function AdminCategories() {
   };
 
   const remove = async (id) => {
-    if (!window.confirm('Delete this category? Products will be un-categorised.')) return;
+    if (
+      !window.confirm(
+        'Delete this category? Subcategories under a main category will also be deleted. Products will be un-categorised.'
+      )
+    ) {
+      return;
+    }
     try {
       await api.delete(`/admin/categories/${id}`);
       toast.success('Category deleted');
@@ -48,10 +71,17 @@ export default function AdminCategories() {
     }
   };
 
+  const typeLabel = (c) => (c.parent_id ? 'Subcategory' : 'Main');
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Categories</h1>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Categories</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Main categories (e.g. Livestock) contain subcategories. Products belong to a subcategory.
+          </p>
+        </div>
         <button
           className="btn-primary w-full sm:w-auto shrink-0"
           onClick={() => setEditing({ ...empty })}
@@ -67,14 +97,21 @@ export default function AdminCategories() {
           <div className="p-8 text-center text-slate-500">No categories yet.</div>
         ) : (
           <>
-            {/* Mobile cards */}
             <div className="md:hidden divide-y divide-slate-100">
               {categories.map((c) => (
                 <div key={c.id} className="p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="font-semibold text-slate-800">{c.name}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">{c.slug}</div>
+                      <div className="font-semibold text-slate-800">
+                        {c.parent_id ? (
+                          <span className="text-slate-400 font-normal">↳ </span>
+                        ) : null}
+                        {c.name}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        {typeLabel(c)}
+                        {c.parent_name ? ` · under ${c.parent_name}` : ''} · {c.slug}
+                      </div>
                       {c.description && (
                         <p className="text-sm text-slate-600 mt-2 line-clamp-2">{c.description}</p>
                       )}
@@ -85,14 +122,15 @@ export default function AdminCategories() {
                       ) : (
                         <span className="badge bg-slate-100 text-slate-700">Hidden</span>
                       )}
-                      <div className="text-xs text-slate-400 mt-1">Sort: {c.sort_order}</div>
                     </div>
                   </div>
                   <div className="mt-3 flex gap-2">
                     <button
                       type="button"
                       className="btn-outline flex-1 text-sm py-2"
-                      onClick={() => setEditing(c)}
+                      onClick={() =>
+                        setEditing({ ...c, parent_id: c.parent_id || '' })
+                      }
                     >
                       Edit
                     </button>
@@ -108,14 +146,14 @@ export default function AdminCategories() {
               ))}
             </div>
 
-            {/* Desktop table */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
                   <tr>
                     <th className="p-3 text-left">Name</th>
+                    <th className="p-3 text-left">Type</th>
+                    <th className="p-3 text-left">Parent</th>
                     <th className="p-3 text-left">Slug</th>
-                    <th className="p-3 text-left">Description</th>
                     <th className="p-3 text-center">Active</th>
                     <th className="p-3 text-center">Sort</th>
                     <th className="p-3"></th>
@@ -124,9 +162,16 @@ export default function AdminCategories() {
                 <tbody>
                   {categories.map((c) => (
                     <tr key={c.id} className="border-t border-slate-100">
-                      <td className="p-3 font-medium text-slate-800">{c.name}</td>
+                      <td className="p-3 font-medium text-slate-800">
+                        {c.parent_id ? (
+                          <span className="pl-3 text-slate-700">↳ {c.name}</span>
+                        ) : (
+                          c.name
+                        )}
+                      </td>
+                      <td className="p-3 text-slate-600">{typeLabel(c)}</td>
+                      <td className="p-3 text-slate-600">{c.parent_name || '—'}</td>
                       <td className="p-3 text-slate-500">{c.slug}</td>
-                      <td className="p-3 text-slate-600 max-w-md truncate">{c.description}</td>
                       <td className="p-3 text-center">
                         {c.is_active ? (
                           <span className="badge bg-green-100 text-green-800">Active</span>
@@ -136,10 +181,18 @@ export default function AdminCategories() {
                       </td>
                       <td className="p-3 text-center">{c.sort_order}</td>
                       <td className="p-3 text-right whitespace-nowrap">
-                        <button className="text-brand-700 hover:underline mr-3" onClick={() => setEditing(c)}>
+                        <button
+                          className="text-brand-700 hover:underline mr-3"
+                          onClick={() =>
+                            setEditing({ ...c, parent_id: c.parent_id || '' })
+                          }
+                        >
                           Edit
                         </button>
-                        <button className="text-red-600 hover:underline" onClick={() => remove(c.id)}>
+                        <button
+                          className="text-red-600 hover:underline"
+                          onClick={() => remove(c.id)}
+                        >
                           Delete
                         </button>
                       </td>
@@ -181,6 +234,26 @@ export default function AdminCategories() {
               />
             </div>
             <div>
+              <label className="label">Parent (main category)</label>
+              <select
+                className="input"
+                value={editing.parent_id || ''}
+                onChange={(e) => setEditing({ ...editing, parent_id: e.target.value })}
+              >
+                <option value="">— None (this is a main category) —</option>
+                {mainCategories
+                  .filter((m) => m.id !== editing.id)
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+              </select>
+              <p className="text-xs text-slate-500 mt-1">
+                Leave empty for a top-level category. Choose a parent to create a subcategory.
+              </p>
+            </div>
+            <div>
               <label className="label">Description</label>
               <textarea
                 className="input"
@@ -201,7 +274,9 @@ export default function AdminCategories() {
                   type="number"
                   className="input"
                   value={editing.sort_order || 0}
-                  onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setEditing({ ...editing, sort_order: Number(e.target.value) })
+                  }
                 />
               </div>
               <label className="flex items-center gap-2 text-sm pt-0 sm:pt-6">
@@ -214,7 +289,11 @@ export default function AdminCategories() {
               </label>
             </div>
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2 border-t border-slate-100 sm:border-0">
-              <button type="button" className="btn-ghost w-full sm:w-auto py-2.5" onClick={() => setEditing(null)}>
+              <button
+                type="button"
+                className="btn-ghost w-full sm:w-auto py-2.5"
+                onClick={() => setEditing(null)}
+              >
                 Cancel
               </button>
               <button type="submit" className="btn-primary w-full sm:w-auto py-2.5">

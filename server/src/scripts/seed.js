@@ -1,24 +1,24 @@
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { pool, query } = require('../db');
+const { seedAgricultureCategories, slugify } = require('./seedAgricultureCategories');
 
-function slugify(text) {
-  return String(text)
-    .toLowerCase()
-    .trim()
-    .replace(/&/g, '-and-')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-async function upsertCategory(name, description, sortOrder, imageUrl) {
+async function upsertCategory(name, description, sortOrder, imageUrl, parentId = null) {
   const slug = slugify(name);
   const existing = await query('SELECT id FROM categories WHERE slug=$1', [slug]);
-  if (existing.rowCount) return existing.rows[0].id;
+  if (existing.rowCount) {
+    if (parentId != null) {
+      await query(
+        `UPDATE categories SET parent_id=COALESCE(parent_id, $1), updated_at=NOW() WHERE id=$2`,
+        [parentId, existing.rows[0].id]
+      );
+    }
+    return existing.rows[0].id;
+  }
   const r = await query(
-    `INSERT INTO categories (name, slug, description, sort_order, image_url)
-     VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-    [name, slug, description, sortOrder, imageUrl]
+    `INSERT INTO categories (name, slug, description, sort_order, image_url, parent_id)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+    [name, slug, description, sortOrder, imageUrl, parentId]
   );
   return r.rows[0].id;
 }
@@ -77,30 +77,37 @@ async function main() {
     );
   }
 
-  // Categories
+  // Agriculture taxonomy (main + sub categories), then Kalro livestock leaves
+  const mainIds = await seedAgricultureCategories();
+  const livestockId = mainIds.Livestock || null;
+
   const goatsId = await upsertCategory(
     'Dairy Goats',
     'High quality dairy goats: Saneen, Giant Alpine and Toggenburg breeds.',
     1,
-    'https://images.unsplash.com/photo-1518731245577-1af64d67f61a?auto=format&fit=crop&w=800&q=80'
+    'https://images.unsplash.com/photo-1518731245577-1af64d67f61a?auto=format&fit=crop&w=800&q=80',
+    livestockId
   );
   const boerId = await upsertCategory(
     'Boer Goats',
     'Full blood Boer goats for meat production, healthy and vaccinated.',
     2,
-    'https://images.unsplash.com/photo-1560468660-6c11a19d7330?auto=format&fit=crop&w=800&q=80'
+    'https://images.unsplash.com/photo-1560468660-6c11a19d7330?auto=format&fit=crop&w=800&q=80',
+    livestockId
   );
   const poultryId = await upsertCategory(
     'Poultry',
     'Commercial layers and Kanga (guinea fowl) birds at wholesale prices.',
     3,
-    'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?auto=format&fit=crop&w=800&q=80'
+    'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?auto=format&fit=crop&w=800&q=80',
+    livestockId
   );
   const eggsId = await upsertCategory(
     'Eggs',
     'Fresh eggs in wholesale trays: Big, Medium and Kienyeji.',
     4,
-    'https://images.unsplash.com/photo-1587486913049-53fc88980cfc?auto=format&fit=crop&w=800&q=80'
+    'https://images.unsplash.com/photo-1587486913049-53fc88980cfc?auto=format&fit=crop&w=800&q=80',
+    livestockId
   );
 
   // Dairy goats

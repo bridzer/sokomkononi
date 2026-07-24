@@ -89,6 +89,10 @@ export default function AdminProducts() {
       toast.error(pricingError);
       return;
     }
+    if (!editing.category_id) {
+      toast.error('Please select a subcategory for this product');
+      return;
+    }
 
     try {
       const images = Array.isArray(editing.images) ? editing.images.filter(Boolean) : [];
@@ -188,7 +192,7 @@ export default function AdminProducts() {
                         <div className="font-semibold text-slate-800 leading-tight">{p.name}</div>
                         {p.breed && <div className="text-xs text-slate-500 mt-0.5">{p.breed}</div>}
                         <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
-                          <span>{p.category_name || 'Uncategorised'}</span>
+                          <span>{p.parent_category_name ? `${p.parent_category_name} / ` : ''}{p.category_name || 'Uncategorised'}</span>
                           <span>· {p.seller_display_name || p.seller_name || 'Kalro Farm Kenya'}</span>
                           {p.age_stage && <span>· {p.age_stage}</span>}
                           <span>· Stock: {p.stock}</span>
@@ -268,7 +272,11 @@ export default function AdminProducts() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-3 text-slate-700">{p.category_name || '—'}</td>
+                    <td className="p-3 text-slate-700">
+                      {p.parent_category_name
+                        ? `${p.parent_category_name} / ${p.category_name || '—'}`
+                        : p.category_name || '—'}
+                    </td>
                     <td className="p-3 text-slate-700">{p.age_stage || '—'}</td>
                     <td className="p-3 text-right font-semibold text-brand-700 whitespace-nowrap">
                       {formatProductPrice(p)}
@@ -340,17 +348,24 @@ export default function AdminProducts() {
                 />
               </div>
               <div>
-                <label className="label">Category</label>
+                <label className="label">Subcategory *</label>
                 <select
                   className="input"
                   value={editing.category_id || ''}
                   onChange={(e) => setEditing({ ...editing, category_id: e.target.value })}
                 >
-                  <option value="">— None —</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
+                  <option value="">— Select subcategory —</option>
+                  {categories
+                    .filter((c) => c.parent_id)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {(c.parent_name || 'Category') + ' / ' + c.name}
+                      </option>
+                    ))}
                 </select>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Products must belong to a subcategory (not a main category).
+                </p>
               </div>
               <div>
                 <label className="label">Seller</label>

@@ -13,9 +13,16 @@ const SELLER_SELECT = `
   COALESCE(s.name, '${DEFAULT_SELLER_NAME}') AS seller_display_name
 `;
 
+const CATEGORY_SELECT = `
+  c.name AS category_name,
+  c.slug AS category_slug,
+  c.parent_id AS category_parent_id,
+  pc.name AS parent_category_name,
+  pc.slug AS parent_category_slug
+`;
+
 // Allowed sort keys → SQL ORDER BY clauses. Anything else falls back to the
-// default (featured first, then newest). Keeping this as an explicit map
-// prevents any risk of injection via the `sort` query param.
+// default (featured first, then newest).
 const SORT_MAP = {
   price_asc: 'p.price ASC, p.created_at DESC',
   price_desc: 'p.price DESC, p.created_at DESC',
@@ -32,8 +39,19 @@ router.get('/', async (req, res, next) => {
     const where = ['p.is_active = TRUE'];
 
     if (category) {
+      // Match subcategory slug OR any product under a main category slug
       params.push(category);
-      where.push(`c.slug = $${params.length}`);
+      const idx = params.length;
+      where.push(`(
+        c.slug = $${idx}
+        OR pc.slug = $${idx}
+        OR EXISTS (
+          SELECT 1 FROM categories main
+          WHERE main.slug = $${idx}
+            AND main.parent_id IS NULL
+            AND c.parent_id = main.id
+        )
+      )`);
     }
     if (search) {
       params.push(`%${search}%`);
@@ -53,10 +71,10 @@ router.get('/', async (req, res, next) => {
     const orderBy = SORT_MAP[sort] || 'p.is_featured DESC, p.created_at DESC';
 
     const sql = `
-      SELECT p.*, c.name AS category_name, c.slug AS category_slug,
-             ${SELLER_SELECT}
+      SELECT p.*, ${CATEGORY_SELECT}, ${SELLER_SELECT}
       FROM products p
       LEFT JOIN categories c ON c.id = p.category_id
+      LEFT JOIN categories pc ON pc.id = c.parent_id
       LEFT JOIN sellers s ON s.id = p.seller_id AND s.is_active = TRUE
       WHERE ${where.join(' AND ')}
       ORDER BY ${orderBy}
@@ -72,10 +90,10 @@ router.get('/', async (req, res, next) => {
 router.get('/:slug', async (req, res, next) => {
   try {
     const result = await query(
-      `SELECT p.*, c.name AS category_name, c.slug AS category_slug,
-              ${SELLER_SELECT}
+      `SELECT p.*, ${CATEGORY_SELECT}, ${SELLER_SELECT}
        FROM products p
        LEFT JOIN categories c ON c.id = p.category_id
+       LEFT JOIN categories pc ON pc.id = c.parent_id
        LEFT JOIN sellers s ON s.id = p.seller_id AND s.is_active = TRUE
        WHERE p.slug = $1 AND p.is_active = TRUE`,
       [req.params.slug]

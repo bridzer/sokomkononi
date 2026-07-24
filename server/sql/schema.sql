@@ -29,6 +29,11 @@ CREATE TABLE IF NOT EXISTS categories (
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Main vs sub-category: NULL parent_id = top-level (e.g. Livestock);
+-- non-NULL = subcategory under that parent. Products should use a subcategory.
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS parent_id INT REFERENCES categories(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id);
+
 -- Products
 CREATE TABLE IF NOT EXISTS products (
   id           SERIAL PRIMARY KEY,

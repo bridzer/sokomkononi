@@ -30,10 +30,11 @@ export default function About() {
           </ul>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <img className="rounded-xl aspect-square object-cover" src="https://images.unsplash.com/photo-1524024973431-2ad916746881?auto=format&fit=crop&w=700&q=80" alt="goats" />
-          <img className="rounded-xl aspect-square object-cover" src="https://images.unsplash.com/photo-1560468660-6c11a19d7330?auto=format&fit=crop&w=700&q=80" alt="boer" />
-          <img className="rounded-xl aspect-square object-cover" src="https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?auto=format&fit=crop&w=700&q=80" alt="poultry" />
-          <img className="rounded-xl aspect-square object-cover" src="https://images.unsplash.com/photo-1587486913049-53fc88980cfc?auto=format&fit=crop&w=700&q=80" alt="eggs" />
+          <img className="rounded-xl aspect-square object-cover" src="/cow.jpg" alt="goats" />
+          <img className="rounded-xl aspect-square object-cover" src="/dairygoat.jpg" alt="boer" />
+          <img className="rounded-xl aspect-square object-cover"               src="https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?auto=format&fit=crop&w=700&q=80"
+ alt="poultry" />
+          <img className="rounded-xl aspect-square object-cover" src="/boargoat.jpg" alt="goats" />
         </div>
       </section>
 

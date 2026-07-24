@@ -7,7 +7,6 @@ import { categoryIcon } from '../utils/categoryIcon';
 import { copyText } from '../utils/format';
 import { trackSearch } from '../utils/analytics';
 
-// ---------- Inline SVG icons ----------
 const SearchIcon = (p) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" {...p}>
     <circle cx="11" cy="11" r="7" />
@@ -36,7 +35,6 @@ const ShareIcon = (p) => (
   </svg>
 );
 
-// ---------- Category chip ----------
 function CategoryChip({ active, to, icon, label, count }) {
   const cls = active
     ? 'bg-brand-700 text-white ring-1 ring-brand-700 shadow-sm'
@@ -46,7 +44,9 @@ function CategoryChip({ active, to, icon, label, count }) {
       to={to}
       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${cls}`}
     >
-      <span className="text-base leading-none" aria-hidden="true">{icon}</span>
+      <span className="text-base leading-none" aria-hidden="true">
+        {icon}
+      </span>
       <span>{label}</span>
       {typeof count === 'number' && (
         <span
@@ -70,20 +70,60 @@ export default function Shop() {
   const sort = searchParams.get('sort') || '';
 
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [tree, setTree] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState(search);
 
   useEffect(() => setQuery(search), [search]);
 
   useEffect(() => {
-    api.get('/categories').then((r) => setCategories(r.data.categories || []));
+    api.get('/categories?tree=true').then((r) => setTree(r.data.categories || []));
   }, []);
+
+  const { mainCategory, subCategory, subTabs, productFilterSlug } = useMemo(() => {
+    if (!categorySlug) {
+      return {
+        mainCategory: null,
+        subCategory: null,
+        subTabs: [],
+        productFilterSlug: null,
+      };
+    }
+
+    const main = tree.find((c) => c.slug === categorySlug);
+    if (main) {
+      return {
+        mainCategory: main,
+        subCategory: null,
+        subTabs: main.children || [],
+        productFilterSlug: main.slug,
+      };
+    }
+
+    for (const m of tree) {
+      const child = (m.children || []).find((c) => c.slug === categorySlug);
+      if (child) {
+        return {
+          mainCategory: m,
+          subCategory: child,
+          subTabs: m.children || [],
+          productFilterSlug: child.slug,
+        };
+      }
+    }
+
+    return {
+      mainCategory: null,
+      subCategory: null,
+      subTabs: [],
+      productFilterSlug: categorySlug,
+    };
+  }, [categorySlug, tree]);
 
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (categorySlug) params.set('category', categorySlug);
+    if (productFilterSlug) params.set('category', productFilterSlug);
     if (search) params.set('search', search);
     if (sort) params.set('sort', sort);
     params.set('limit', '100');
@@ -91,23 +131,17 @@ export default function Shop() {
       .get(`/products?${params.toString()}`)
       .then((r) => setProducts(r.data.products || []))
       .finally(() => setLoading(false));
-  }, [categorySlug, search, sort]);
+  }, [productFilterSlug, search, sort]);
 
   useEffect(() => {
     if (search) trackSearch(search);
   }, [search]);
 
-  const activeCategory = useMemo(
-    () => categories.find((c) => c.slug === categorySlug) || null,
-    [categorySlug, categories]
-  );
-
-  const title = activeCategory?.name || 'All products';
+  const title = subCategory?.name || mainCategory?.name || 'All products';
   const totalCount = products.length;
-
   const hasActiveFilters = !!(categorySlug || search || sort);
+  const showSubTabs = !!mainCategory;
 
-  // ---------- Handlers ----------
   const submitSearch = (e) => {
     e.preventDefault();
     const p = new URLSearchParams(searchParams);
@@ -123,13 +157,16 @@ export default function Shop() {
     setQuery('');
   };
 
-  const onCategoryChange = (slug) => {
-    // Categories live in the path, not the query string.
+  const onSubChange = (slug) => {
     const qs = searchParams.toString();
-    navigate(slug ? `/shop/${slug}${qs ? '?' + qs : ''}` : `/shop${qs ? '?' + qs : ''}`);
+    const base = slug
+      ? `/shop/${slug}`
+      : mainCategory
+        ? `/shop/${mainCategory.slug}`
+        : '/shop';
+    navigate(`${base}${qs ? `?${qs}` : ''}`);
   };
 
-  // Cycle: none → asc → desc → none
   const nextSort = () => {
     if (sort === 'price_asc') return 'price_desc';
     if (sort === 'price_desc') return '';
@@ -147,7 +184,8 @@ export default function Shop() {
   const reset = () => {
     setSearchParams(new URLSearchParams());
     setQuery('');
-    if (categorySlug) navigate('/shop');
+    if (mainCategory) navigate(`/shop/${mainCategory.slug}`);
+    else if (categorySlug) navigate('/shop');
   };
 
   const share = async () => {
@@ -163,7 +201,7 @@ export default function Shop() {
         return;
       }
     } catch {
-      // user cancelled or share failed — fall through to copy path
+      /* fall through */
     }
     const ok = await copyText(url);
     if (ok) toast.success('Link copied to clipboard');
@@ -171,52 +209,89 @@ export default function Shop() {
   };
 
   const sortLabel =
-    sort === 'price_asc'
-      ? 'Price ↑'
-      : sort === 'price_desc'
-      ? 'Price ↓'
-      : 'Sort price';
+    sort === 'price_asc' ? 'Price ↑' : sort === 'price_desc' ? 'Price ↓' : 'Sort price';
 
-  // ---------- Render ----------
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
-      {/* Breadcrumb + Title */}
-      <div className="mb-4 sm:mb-6">        
+      <div className="mb-4 sm:mb-6">
+        <div className="text-sm text-slate-500 mb-1">
+          <Link to="/shop" className="hover:underline">
+            Shop
+          </Link>
+          {mainCategory && (
+            <>
+              {' / '}
+              <Link to={`/shop/${mainCategory.slug}`} className="hover:underline">
+                {mainCategory.name}
+              </Link>
+            </>
+          )}
+          {subCategory && (
+            <>
+              {' / '}
+              <span className="text-slate-700">{subCategory.name}</span>
+            </>
+          )}
+        </div>
         <div className="mt-1 flex items-baseline gap-3 flex-wrap">
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">{title}</h1>
           <span className="text-sm text-slate-500">
             {loading ? '…' : `${totalCount} product${totalCount === 1 ? '' : 's'}`}
           </span>
         </div>
+        {!sort && (
+          <p className="mt-1 text-xs text-slate-500">Featured products appear first.</p>
+        )}
       </div>
 
-      {/* -------- Category chip strip -------- */}
-      <div className="-mx-3 sm:mx-0 px-3 sm:px-0 mb-4">
-        <div
-          role="tablist"
-          aria-label="Filter by category"
-          className="flex flex-wrap gap-2"
-        >
-          <CategoryChip
-            to="/shop"
-            active={!categorySlug}
-            icon={categoryIcon('all')}
-            label="All"
-          />
-          {categories.map((c) => (
+      {/* Main categories when browsing all products */}
+      {!showSubTabs && (
+        <div className="-mx-3 sm:mx-0 px-3 sm:px-0 mb-4">
+          <div role="tablist" aria-label="Main categories" className="flex flex-wrap gap-2">
             <CategoryChip
-              key={c.id}
-              to={`/shop/${c.slug}`}
-              active={categorySlug === c.slug}
-              icon={categoryIcon(c.name)}
-              label={c.name}
-              count={c.product_count}
+              to="/shop"
+              active={!categorySlug}
+              icon={categoryIcon('all')}
+              label="All"
             />
-          ))}
+            {tree.map((c) => (
+              <CategoryChip
+                key={c.id}
+                to={`/shop/${c.slug}`}
+                active={false}
+                icon={categoryIcon(c.slug || c.name)}
+                label={c.name}
+                count={c.product_count}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* -------- Search + filter card -------- */}
+      {/* Subcategory tabs when inside a main category */}
+      {showSubTabs && (
+        <div className="-mx-3 sm:mx-0 px-3 sm:px-0 mb-4">
+          <div role="tablist" aria-label="Subcategories" className="flex flex-wrap gap-2">
+            <CategoryChip
+              to={`/shop/${mainCategory.slug}`}
+              active={!subCategory}
+              icon={categoryIcon('all')}
+              label="All"
+            />
+            {subTabs.map((c) => (
+              <CategoryChip
+                key={c.id}
+                to={`/shop/${c.slug}`}
+                active={subCategory?.slug === c.slug}
+                icon={categoryIcon(c.slug || c.name)}
+                label={c.name}
+                count={c.product_count}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="card p-3 sm:p-4 mb-6">
         <div className="grid gap-2.5 sm:gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
           <form onSubmit={submitSearch} className="relative">
@@ -243,36 +318,50 @@ export default function Shop() {
           </form>
 
           <div className="flex items-center gap-2">
-            <label className="sr-only" htmlFor="shop-category-select">Category</label>
-            <div className="relative flex-1 sm:flex-none">
-              <select
-                id="shop-category-select"
-                value={categorySlug || ''}
-                onChange={(e) => onCategoryChange(e.target.value)}
-                className="input py-2.5 pr-9 appearance-none bg-slate-50 border-slate-200 focus:bg-white cursor-pointer min-w-[160px]"
-              >
-                <option value="">All Categories</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.slug}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="w-4 h-4 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-              >
-                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+            {showSubTabs ? (
+              <div className="relative flex-1 sm:flex-none">
+                <label className="sr-only" htmlFor="shop-sub-select">
+                  Subcategory
+                </label>
+                <select
+                  id="shop-sub-select"
+                  value={subCategory?.slug || ''}
+                  onChange={(e) => onSubChange(e.target.value)}
+                  className="input py-2.5 pr-9 appearance-none bg-slate-50 border-slate-200 focus:bg-white cursor-pointer min-w-[160px]"
+                >
+                  <option value="">All in {mainCategory.name}</option>
+                  {subTabs.map((c) => (
+                    <option key={c.id} value={c.slug}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="relative flex-1 sm:flex-none">
+                <label className="sr-only" htmlFor="shop-main-select">
+                  Category
+                </label>
+                <select
+                  id="shop-main-select"
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) navigate(`/shop/${e.target.value}`);
+                  }}
+                  className="input py-2.5 pr-9 appearance-none bg-slate-50 border-slate-200 focus:bg-white cursor-pointer min-w-[160px]"
+                >
+                  <option value="">All Categories</option>
+                  {tree.map((c) => (
+                    <option key={c.id} value={c.slug}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Action row: Sort · Reset · Share */}
         <div className="mt-2.5 sm:mt-3 flex flex-wrap items-center gap-2 justify-end">
           <button
             type="button"
@@ -309,17 +398,18 @@ export default function Shop() {
         </div>
       </div>
 
-      {/* -------- Product grid (native ads injected automatically every 10 products) -------- */}
       <ProductListingGrid
         products={products}
         loading={loading}
         adContext={{ categorySlug, search }}
         emptyState={
           <div className="card p-10 text-center">
-            <div className="text-4xl mb-2" aria-hidden="true">🔍</div>
+            <div className="text-4xl mb-2" aria-hidden="true">
+              🔍
+            </div>
             <div className="text-slate-700 font-semibold">No products found</div>
             <div className="text-sm text-slate-500 mt-1">
-              Try a different category or clear your search.
+              Try a different subcategory or clear your search.
             </div>
             {hasActiveFilters && (
               <button onClick={reset} className="btn-outline mt-4 text-sm">
