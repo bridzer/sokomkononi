@@ -4,8 +4,7 @@ import { formatProductPrice, orderWhatsAppMessage } from '../utils/format';
 import { useCart } from '../context/CartContext';
 import { getSellerDisplayName } from '../utils/delivery';
 import { pickScriptForProduct } from '../utils/whatsappScripts';
-import WhatsAppButton from './WhatsAppButton';
-import ProductShareButton from './ProductShareButton';
+
 import BookProductModal from './BookProductModal';
 import SafeImage, { DEFAULT_FALLBACK } from './SafeImage';
 
