@@ -9,7 +9,7 @@ export default function WhatsAppFloat() {
       <WhatsAppButton
         message={message}
         placement="top-end"
-        title="Chat with Kalro Farm on WhatsApp"
+        title="Chat with Soko Mkononi on WhatsApp"
         className="flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white px-4 py-3 rounded-full shadow-lg transition"
       >
         <svg viewBox="0 0 32 32" className="w-6 h-6" fill="currentColor">

@@ -101,15 +101,15 @@ const FALLBACK_LINES = [
   {
     id: 'main',
     label: 'Main Line',
-    subtitle: 'Sales & orders',
+    subtitle: 'Marketplace orders',
     number: '+254762179325',
     whatsapp: '+254762179325',
     display: '0762179325',
   },
   {
     id: 'naivasha',
-    label: 'Naivasha Branch',
-    subtitle: 'Poultry & Eggs',
+    label: 'Naivasha Hub',
+    subtitle: 'Farm goods & pickup',
     number: '+254762179325',
   },
 ];
@@ -150,9 +150,9 @@ const _lines = buildLines();
 // -----------------------------------------------------------------------------
 
 export const BUSINESS = {
-  name: envStr('REACT_APP_BUSINESS_NAME') || 'Kalro Farm Kenya',
+  name: envStr('REACT_APP_BUSINESS_NAME') || 'Soko Mkononi',
   location: envStr('REACT_APP_BUSINESS_LOCATION') || 'Naivasha, Nakuru County, Kenya',
-  email: envStr('REACT_APP_BUSINESS_EMAIL') || 'info@kalro.store',
+  email: envStr('REACT_APP_BUSINESS_EMAIL') || 'info@sokomkononi.co.ke',
 };
 
 /**
@@ -205,11 +205,11 @@ export const MAP_CONFIG = {
   query:
     envStr('REACT_APP_GOOGLE_MAPS_QUERY') ||
     envStr('REACT_APP_BUSINESS_LOCATION') ||
-    'Kalro Farm Kenya, Naivasha',
-  title: envStr('REACT_APP_GOOGLE_MAPS_TITLE') || 'Visit Kalro Farm Kenya',
+    'Soko Mkononi, Naivasha',
+  title: envStr('REACT_APP_GOOGLE_MAPS_TITLE') || 'Visit Soko Mkononi',
   description:
     envStr('REACT_APP_GOOGLE_MAPS_DESCRIPTION') ||
-    'Find us in Naivasha. Get directions, plan your visit, or share our location with your driver.',
+    'Find our marketplace hub in Naivasha. Get directions, plan your visit, or share the location with your driver.',
   hours: envStr('REACT_APP_GOOGLE_MAPS_HOURS') || 'Mon–Sat: 8:00 AM – 6:00 PM',
 };
 

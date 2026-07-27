@@ -2,7 +2,7 @@
   "name": "kalro-farm",
   "version": "1.0.0",
   "private": true,
-  "description": "Kalro Farm Kenya - E-commerce platform for dairy goats, poultry and eggs",
+  "description": "Soko Mkononi - Agricultural marketplace connecting Kenya's farmers",
   "engines": {
     "node": ">=18"
   },

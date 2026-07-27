@@ -81,7 +81,7 @@ export default function ImageUpload({ value, onChange, label = 'Image' }) {
             )}
           </div>
           <p className="text-xs text-slate-500 mt-2">
-            JPG, PNG, WEBP, GIF or SVG · up to 20 MB. Uploaded to server.
+            JPG, PNG, WEBP or GIF · up to 20 MB. Uploaded to server.
           </p>
           {value && (
             <p className="text-xs text-slate-400 mt-1 truncate" title={value}>
@@ -92,7 +92,7 @@ export default function ImageUpload({ value, onChange, label = 'Image' }) {
         <input
           ref={inputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,.jpg,.jpeg,.png,.webp,.gif,.svg"
+          accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
           className="hidden"
           onChange={handleFile}
         />

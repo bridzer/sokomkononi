@@ -262,7 +262,7 @@ export default function AdminOrders() {
                   return to ? (
                     <a
                       href={whatsappUrl(
-                        `Hello ${detail.customer_name}, this is Kalro Farm regarding your order ${detail.order_number}.`,
+                        `Hello ${detail.customer_name}, this is Soko Mkononi regarding your order ${detail.order_number}.`,
                         to
                       )}
                       target="_blank"

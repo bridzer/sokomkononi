@@ -57,7 +57,7 @@ export default function ProductDetail() {
     if (!product) return undefined;
 
     const prevTitle = document.title;
-    document.title = `${product.name} | Kalro Farm Kenya`;
+    document.title = `${product.name} | Soko Mkononi`;
 
     const pageUrl = getProductPageUrl(product.slug);
     const description = buildProductShareText(product);

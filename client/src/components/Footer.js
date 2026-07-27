@@ -42,23 +42,23 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 py-10 md:py-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
         <div className="sm:col-span-2 lg:col-span-1">
           <div className="flex items-center gap-3">
-            <span className="shrink-0 w-11 h-11 rounded-full bg-white ring-1 ring-white/20 overflow-hidden inline-flex items-center justify-center">
+            <span className="shrink-0 w-11 h-11 rounded-full bg-white overflow-hidden inline-flex items-center justify-center">
               <img
-                src="/kalro-logo.png"
-                alt="Kalro Farm Kenya logo"
+                src="/soko-mkononi-logo.png"
+                alt="Soko Mkononi logo"
                 className="w-full h-full object-cover"
               />
             </span>
             <div>
-              <div className="text-white font-bold text-lg leading-tight">Kalro Farm</div>
+              <div className="font-display text-white font-semibold text-lg leading-tight">Soko Mkononi</div>
               <div className="text-[10px] uppercase tracking-[0.2em] text-brand-200/80">
-                Kenya · Nakuru . Naivasha
+                The market in your hand
               </div>
             </div>
           </div>
           <p className="mt-3 text-sm text-brand-200 leading-relaxed">
-            Healthy dairy cattle,  &amp; boer goats, poultry and farm products.
-            Vaccinated, disease-free stock delivered countrywide.
+            Kenya&apos;s agricultural marketplace connecting farmers with buyers of
+            livestock, crops, machinery, and farm inputs — delivered countrywide.
           </p>
         </div>
 
@@ -157,7 +157,7 @@ export default function Footer() {
 
       <div className="border-t border-brand-800">
         <div className="max-w-7xl mx-auto px-4 py-4 text-[11px] sm:text-xs text-brand-200 flex flex-col sm:flex-row justify-between gap-2">
-          <span>© {new Date().getFullYear()} Kalro Farm Kenya. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} Soko Mkononi. All rights reserved.</span>
           <span className="text-brand-200/80 flex flex-wrap gap-x-3 gap-y-1">
             <Link to="/privacy" className="hover:text-white">Privacy</Link>
             <Link to="/terms" className="hover:text-white">Terms</Link>

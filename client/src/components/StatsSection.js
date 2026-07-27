@@ -3,7 +3,7 @@ import React from 'react';
 const stats = [
   {
     value: '5,000+',
-    label: 'Happy Customers',
+    label: 'Farm Traders Served',
     Icon: (props) => (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" {...props}>
         <circle cx="9" cy="8" r="3.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -15,7 +15,7 @@ const stats = [
   },
   {
     value: '500+',
-    label: 'Products In Stock',
+    label: 'Marketplace Listings',
     Icon: (props) => (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" {...props}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l8.5 4.5v9L12 21 3.5 16.5v-9L12 3z" />
@@ -25,8 +25,8 @@ const stats = [
     ),
   },
   {
-    value: '10+ Yrs',
-    label: 'In Business',
+    value: '10+',
+    label: 'Farm Categories',
     Icon: (props) => (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" {...props}>
         <circle cx="12" cy="9" r="5.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -62,14 +62,14 @@ export default function StatsSection() {
         <div className="relative px-6 sm:px-10 py-14 md:py-16">
           <div className="text-center mb-10 md:mb-12">
             <span className="badge bg-brand-500/20 text-brand-100 border border-brand-400/30">
-              Trusted by farmers across Kenya
+              Connecting farmers across Kenya
             </span>
-            <h2 className="mt-3 text-2xl md:text-3xl font-extrabold text-white">
-              Our track record speaks for itself
+            <h2 className="mt-3 font-display text-2xl md:text-3xl font-semibold text-white">
+              Built for Kenya&apos;s farm trade
             </h2>
             <p className="mt-2 text-sm md:text-base text-brand-100/80 max-w-2xl mx-auto">
-              A decade of raising healthy livestock and delivering to farmers,
-              agri-businesses and households across every county in Kenya.
+              Buyers and sellers already use Soko Mkononi for livestock, produce,
+              machinery, and inputs — with delivery arranged across every county.
             </p>
           </div>
 

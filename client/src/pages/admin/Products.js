@@ -193,7 +193,7 @@ export default function AdminProducts() {
                         {p.breed && <div className="text-xs text-slate-500 mt-0.5">{p.breed}</div>}
                         <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
                           <span>{p.parent_category_name ? `${p.parent_category_name} / ` : ''}{p.category_name || 'Uncategorised'}</span>
-                          <span>· {p.seller_display_name || p.seller_name || 'Kalro Farm Kenya'}</span>
+                          <span>· {p.seller_display_name || p.seller_name || 'Soko Mkononi'}</span>
                           {p.age_stage && <span>· {p.age_stage}</span>}
                           <span>· Stock: {p.stock}</span>
                         </div>
@@ -374,7 +374,7 @@ export default function AdminProducts() {
                   value={editing.seller_id || ''}
                   onChange={(e) => setEditing({ ...editing, seller_id: e.target.value })}
                 >
-                  <option value="">Kalro Farm Kenya (default)</option>
+                  <option value="">Soko Mkononi (default)</option>
                   {sellers.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}

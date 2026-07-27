@@ -54,13 +54,13 @@ export default function AdminLayout() {
         <div className="p-4 sm:p-5 border-b border-brand-800 flex items-center gap-2.5">
           <span className="w-10 h-10 rounded-full bg-white grid place-items-center overflow-hidden shrink-0 ring-1 ring-white/10">
             <img
-              src="/kalro-logo.png"
-              alt="Kalro Farm Kenya logo"
+              src="/soko-mkononi-logo.png"
+              alt="Soko Mkononi logo"
               className="w-full h-full object-cover"
             />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="font-bold leading-tight text-sm sm:text-base">Kalro Admin</div>
+            <div className="font-bold leading-tight text-sm sm:text-base">Soko Admin</div>
           </div>
           <button
             type="button"

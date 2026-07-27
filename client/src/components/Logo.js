@@ -2,15 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 /**
- * Brand logo — renders the KALRO photo mark plus an optional wordmark.
+ * Brand logo — photo mark plus Soko Mkononi wordmark.
  *
  * Variants:
- *   - "full"   (default) — mark + "Kalro Farm / Kenya" wordmark, links to /
- *   - "mark"              — just the round photo mark (no wordmark, no link)
- *   - "stacked"           — centered logo above wordmark, used on hero/login
- *
- * All variants are responsive; the wordmark auto-hides below `sm` when
- * space is tight, keeping the header compact on phones.
+ *   - "full"   (default) — mark + wordmark, links to /
+ *   - "mark"              — round photo mark only
+ *   - "stacked"           — centered logo above wordmark (login/hero)
  */
 export default function Logo({
   variant = 'full',
@@ -23,12 +20,12 @@ export default function Logo({
 }) {
   const mark = (
     <span
-      className={`shrink-0 inline-flex items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden ${markClassName}`}
+      className={`shrink-0 inline-flex items-center justify-center rounded-full overflow-hidden bg-white ${markClassName}`}
       style={{ width: size, height: size }}
     >
       <img
-        src="/kalro-logo.png"
-        alt="Kalro Farm Kenya logo"
+        src="/soko-mkononi-logo.png"
+        alt="Soko Mkononi logo"
         className="w-full h-full object-cover"
         draggable="false"
       />
@@ -43,11 +40,11 @@ export default function Logo({
         {mark}
         {showWordmark && (
           <div className={`text-center leading-tight ${wordmarkClassName}`}>
-            <div className="font-extrabold text-brand-700 text-lg tracking-tight">
-              Kalro Farm
+            <div className="font-display font-semibold text-brand-700 text-lg tracking-tight">
+              Soko Mkononi
             </div>
             <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
-              Kenya
+              The market in your hand
             </div>
           </div>
         )}
@@ -57,11 +54,11 @@ export default function Logo({
 
   const wordmark = showWordmark && (
     <div className={`leading-tight ${wordmarkClassName}`}>
-      <div className="font-extrabold text-brand-700 tracking-tight text-[15px] sm:text-base">
-        Kalro Farm
+      <div className="font-display font-semibold text-brand-700 tracking-tight text-[15px] sm:text-base">
+        Soko Mkononi
       </div>
-      <div className="text-[9px] sm:text-[10px] uppercase tracking-[0.18em] text-slate-500">
-        Kenya
+      <div className="text-[6px] sm:text-[10px] uppercase tracking-[0.18em] text-slate-500">
+        The Global marketplace
       </div>
     </div>
   );
@@ -74,7 +71,7 @@ export default function Logo({
   );
 
   return linkTo ? (
-    <Link to={linkTo} className="inline-flex items-center" aria-label="Kalro Farm Kenya — home">
+    <Link to={linkTo} className="inline-flex items-center" aria-label="Soko Mkononi — home">
       {inner}
     </Link>
   ) : (

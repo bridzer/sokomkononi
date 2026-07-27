@@ -1,8 +1,8 @@
-# Kalro Farm Kenya — E-commerce Website
+# Soko Mkononi — Agricultural Marketplace
 
-A simple, efficient e-commerce platform for **Kalro Farm Kenya** (Naivasha) selling dairy goats, boer goats, poultry, kanga birds and farm-fresh eggs. Built for farmers, agri-businesses and the general public with tight WhatsApp integration.
+An agricultural marketplace connecting Kenya's farmers with buyers of livestock, crops, horticulture, farm machinery, and inputs. WhatsApp-first ordering, multi-seller catalog, and countrywide delivery.
 
-**Reference:** https://karlofarm.co.ke
+**Brand:** Soko Mkononi — *the market in your hand*
 
 ## Tech stack
 
@@ -22,6 +22,7 @@ kalro/
 │   ├── sql/         # PostgreSQL schema
 │   ├── uploads/     # Admin-uploaded product/category images (created automatically)
 │   └── src/scripts/ # migrate.js, seed.js
+├── .agents/         # Product marketing context for brand & campaigns
 ├── package.json     # root workspace scripts
 └── README.md
 ```
@@ -432,6 +433,4 @@ Railway's build system (Railpack) needs to know this is a Node app deployable fr
 
 ## License
 
-Proprietary — © Kalro Farm Kenya.
-#   f a r m c a r e  
- 
+Proprietary — © Soko Mkononi.

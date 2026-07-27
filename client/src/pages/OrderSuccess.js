@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { cartWhatsAppMessage, formatKsh } from '../utils/format';
 import WhatsAppButton from '../components/WhatsAppButton';
@@ -19,18 +19,25 @@ const PAYMENT_LABELS = {
 export default function OrderSuccess() {
   const { orderNumber } = useParams();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const viewToken =
+    location.state?.viewToken ||
+    location.state?.order?.view_token ||
+    searchParams.get('t') ||
+    '';
   const [order, setOrder] = useState(location.state?.order || null);
   const [loading, setLoading] = useState(!order);
   const initialPayment = location.state?.payment;
 
   useEffect(() => {
     if (order) return;
+    const params = viewToken ? { t: viewToken } : {};
     api
-      .get(`/orders/lookup/${orderNumber}`)
+      .get(`/orders/lookup/${orderNumber}`, { params })
       .then((r) => setOrder(r.data.order))
       .finally(() => setLoading(false));
-  }, [orderNumber, order]);
+  }, [orderNumber, order, viewToken]);
 
   // Poll Loop payment status while pending
   useEffect(() => {
@@ -40,7 +47,8 @@ export default function OrderSuccess() {
     if (order.payment_status !== 'pending') return undefined;
 
     const poll = () => {
-      api.get(`/payments/loop/status/${order.order_number}`).then((r) => {
+      const params = viewToken ? { t: viewToken } : {};
+      api.get(`/payments/loop/status/${order.order_number}`, { params }).then((r) => {
         const next = r.data;
         if (next.payment_status !== order.payment_status) {
           setOrder((o) => ({ ...o, payment_status: next.payment_status, status: next.order_status }));
@@ -51,7 +59,7 @@ export default function OrderSuccess() {
     poll();
     const id = setInterval(poll, 4000);
     return () => clearInterval(id);
-  }, [order]);
+  }, [order, viewToken]);
 
   if (loading) {
     return <div className="max-w-4xl mx-auto px-4 py-16 text-center text-slate-500">Loading…</div>;
@@ -148,7 +156,7 @@ export default function OrderSuccess() {
           <h2 className="font-semibold text-slate-800">Order details</h2>
           <div className="mt-2 space-y-2">
             {order.items?.map((it) => (
-              <div key={it.id} className="flex justify-between text-sm border-b border-slate-100 py-1">
+              <div key={it.id || `${it.product_name}-${it.quantity}`} className="flex justify-between text-sm border-b border-slate-100 py-1">
                 <span>
                   {it.product_name} × {it.quantity}
                 </span>

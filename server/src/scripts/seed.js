@@ -44,20 +44,29 @@ async function upsertProduct(p) {
 async function main() {
   console.log('Seeding database...');
 
-  // Admin user
-  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@kalrofarm.co.ke').toLowerCase();
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@1234';
-  const adminName = process.env.ADMIN_NAME || 'Kalro Admin';
-  const adminExists = await query('SELECT id FROM users WHERE email=$1', [adminEmail]);
-  if (!adminExists.rowCount) {
-    const hash = await bcrypt.hash(adminPassword, 10);
-    await query(
-      `INSERT INTO users (name,email,password_hash,role) VALUES ($1,$2,$3,'admin')`,
-      [adminName, adminEmail, hash]
+  // Admin user — require an explicit password in production (no default).
+  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@sokomkononi.co.ke').toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminName = process.env.ADMIN_NAME || 'Soko Admin';
+  if (!adminPassword) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('ADMIN_PASSWORD must be set to seed an admin user in production');
+    }
+    console.warn(
+      '[seed] ADMIN_PASSWORD unset — skipping admin create. Set ADMIN_PASSWORD to bootstrap.'
     );
-    console.log(`Admin created: ${adminEmail} / ${adminPassword}`);
   } else {
-    console.log(`Admin already exists: ${adminEmail}`);
+    const adminExists = await query('SELECT id FROM users WHERE email=$1', [adminEmail]);
+    if (!adminExists.rowCount) {
+      const hash = await bcrypt.hash(adminPassword, 10);
+      await query(
+        `INSERT INTO users (name,email,password_hash,role) VALUES ($1,$2,$3,'admin')`,
+        [adminName, adminEmail, hash]
+      );
+      console.log(`Admin created: ${adminEmail}`);
+    } else {
+      console.log(`Admin already exists: ${adminEmail}`);
+    }
   }
 
   // Settings row
@@ -67,17 +76,17 @@ async function main() {
       `INSERT INTO settings (business_name, whatsapp_number, phone_number, email, location, about)
        VALUES ($1,$2,$3,$4,$5,$6)`,
       [
-        'Kalro Farm Kenya',
+        'Soko Mkononi',
         process.env.WHATSAPP_NUMBER || '254756908482',
         process.env.PHONE_NUMBER || '0756908482',
-        process.env.BUSINESS_EMAIL || 'info@kalrofarm.co.ke',
+        process.env.BUSINESS_EMAIL || 'info@sokomkononi.co.ke',
         process.env.BUSINESS_LOCATION || 'Naivasha, Kenya',
-        'Kalro Farm Kenya offers high quality dairy goats, boer goats, poultry, and farm-fresh eggs. Free delivery countrywide.',
+        'Soko Mkononi is Kenya’s agricultural marketplace connecting farmers with buyers of livestock, crops, machinery, and farm inputs. Order via WhatsApp — delivery arranged countrywide.',
       ]
     );
   }
 
-  // Agriculture taxonomy (main + sub categories), then Kalro livestock leaves
+  // Agriculture taxonomy (main + sub categories), then livestock leaf categories
   const mainIds = await seedAgricultureCategories();
   const livestockId = mainIds.Livestock || null;
 
@@ -213,7 +222,7 @@ async function main() {
     await upsertProduct({
       ...e,
       category_id: eggsId,
-      description: 'Farm-fresh eggs from Kalro Farm. Wholesale prices.',
+      description: 'Farm-fresh eggs listed on Soko Mkononi. Wholesale prices.',
       image_url:
         'https://images.unsplash.com/photo-1587486913049-53fc88980cfc?auto=format&fit=crop&w=800&q=80',
     });

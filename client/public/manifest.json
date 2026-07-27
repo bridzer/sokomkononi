@@ -1,7 +1,7 @@
 {
-  "short_name": "Kalro Farm",
-  "name": "Kalro Farm Kenya",
-  "description": "Vaccinated, disease-free livestock and farm-fresh eggs. Free countrywide delivery.",
+  "short_name": "Soko Mkononi",
+  "name": "Soko Mkononi — Agricultural Marketplace",
+  "description": "Kenya's agricultural marketplace connecting farmers with buyers. Livestock, crops, machinery and inputs. Countrywide delivery.",
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
@@ -9,7 +9,7 @@
   "background_color": "#ffffff",
   "icons": [
     {
-      "src": "kalro-logo.png",
+      "src": "soko-mkononi-logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

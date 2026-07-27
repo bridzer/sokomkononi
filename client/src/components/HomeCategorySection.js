@@ -154,10 +154,10 @@ export default function HomeCategorySection() {
   const share = async () => {
     const url = window.location.origin + '/';
     const shareData = {
-      title: 'Kalro Farm Kenya',
+      title: 'Soko Mkononi',
       text: search
-        ? `Featured products matching “${search}” on Kalro Farm Kenya.`
-        : 'Browse featured farm products from Kalro Farm Kenya.',
+        ? `Featured products matching “${search}” on Soko Mkononi.`
+        : 'Browse farm products on Soko Mkononi — Kenya’s agricultural marketplace.',
       url,
     };
     try {

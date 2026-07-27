@@ -271,7 +271,7 @@ router.get('/products', async (req, res, next) => {
     const sql = `SELECT p.*, c.name AS category_name, c.slug AS category_slug,
                         pc.name AS parent_category_name, pc.slug AS parent_category_slug,
                         s.name AS seller_name,
-                        COALESCE(s.name, 'Kalro Farm Kenya') AS seller_display_name
+                        COALESCE(s.name, 'Soko Mkononi') AS seller_display_name
                  FROM products p
                  LEFT JOIN categories c ON c.id = p.category_id
                  LEFT JOIN categories pc ON pc.id = c.parent_id
@@ -587,7 +587,7 @@ router.put('/sellers/:id', async (req, res, next) => {
 
 router.delete('/sellers/:id', async (req, res, next) => {
   try {
-    // Products keep selling under Kalro Farm default (seller_id SET NULL via FK)
+    // Products keep selling under Soko Mkononi default (seller_id SET NULL via FK)
     const r = await query('DELETE FROM sellers WHERE id=$1 RETURNING id', [req.params.id]);
     if (!r.rowCount) return res.status(404).json({ error: 'Seller not found' });
     res.json({ success: true });

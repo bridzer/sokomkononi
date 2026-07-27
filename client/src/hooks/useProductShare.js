@@ -131,7 +131,7 @@ export default function useProductShare(product, { requireActive = false } = {})
     trackShare('product', product.id, 'email');
     const url = emailShareUrl(
       pageUrl,
-      `${product.name} — Kalro Farm Kenya`,
+      `${product.name} — Soko Mkononi`,
       `${shareText}\n\n${pageUrl}`
     );
     window.location.href = url;

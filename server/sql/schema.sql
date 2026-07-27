@@ -1,4 +1,4 @@
--- Kalro Farm Kenya - PostgreSQL Schema
+-- Soko Mkononi - PostgreSQL Schema
 -- Idempotent: safe to run multiple times
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS contact_messages (
 -- Site settings (single row)
 CREATE TABLE IF NOT EXISTS settings (
   id                SERIAL PRIMARY KEY,
-  business_name     VARCHAR(160) NOT NULL DEFAULT 'Kalro Farm Kenya',
+  business_name     VARCHAR(160) NOT NULL DEFAULT 'Soko Mkononi',
   whatsapp_number   VARCHAR(32),
   phone_number      VARCHAR(32),
   email             VARCHAR(160),
@@ -175,7 +175,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_transactions_reference ON payment_
 CREATE INDEX IF NOT EXISTS idx_payment_transactions_order ON payment_transactions(order_id);
 CREATE INDEX IF NOT EXISTS idx_orders_payment_status ON orders(payment_status);
 
--- Sellers (created by admin; products without a seller belong to Kalro Farm by default)
+-- Sellers (created by admin; products without a seller belong to Soko Mkononi by default)
 CREATE TABLE IF NOT EXISTS sellers (
   id          SERIAL PRIMARY KEY,
   name        VARCHAR(160) NOT NULL,
@@ -198,6 +198,12 @@ CREATE INDEX IF NOT EXISTS idx_products_seller ON products(seller_id);
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_min_days INT NOT NULL DEFAULT 3;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_max_days INT NOT NULL DEFAULT 7;
 CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
+
+-- Opaque view token for confirmation / payment status (prevents order-number enumeration)
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS view_token VARCHAR(64);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_view_token ON orders(view_token) WHERE view_token IS NOT NULL;
+-- Longer unpredictable order numbers (KF-YYYYMMDD- + 16 hex)
+ALTER TABLE orders ALTER COLUMN order_number TYPE VARCHAR(40);
 
 -- Out-of-stock product bookings (interest / waitlist)
 CREATE TABLE IF NOT EXISTS product_bookings (

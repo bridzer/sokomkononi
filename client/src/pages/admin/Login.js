@@ -37,12 +37,12 @@ export default function AdminLogin() {
         <div className="text-center mb-5 sm:mb-6">
           <span className="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white grid place-items-center overflow-hidden ring-4 ring-white/10 shadow-lg">
             <img
-              src="/kalro-logo.png"
-              alt="Kalro Farm Kenya logo"
+              src="/soko-mkononi-logo.png"
+              alt="Soko Mkononi logo"
               className="w-full h-full object-cover"
             />
           </span>
-          <h1 className="text-white text-xl sm:text-2xl font-bold mt-3">Kalro Farm Admin</h1>
+          <h1 className="text-white text-xl sm:text-2xl font-bold mt-3">Soko Mkononi Admin</h1>
           <p className="text-brand-200 text-sm">Sign in to manage the store</p>
         </div>
         <form onSubmit={onSubmit} className="card p-5 sm:p-6 space-y-4">

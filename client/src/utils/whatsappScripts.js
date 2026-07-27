@@ -3,7 +3,7 @@ import { formatProductPrice } from './pricing';
 import { deliveryLabel } from './delivery';
 
 /**
- * WhatsApp sales scripts for Kalro Farm Kenya.
+ * WhatsApp sales scripts for Soko Mkononi.
  * Use these as saved replies when a customer enquires.
  */
 

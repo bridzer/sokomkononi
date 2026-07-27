@@ -8,7 +8,7 @@
  *   LOOP_CLIENT_ID
  *   LOOP_CLIENT_SECRET
  *   LOOP_API_KEY            — optional subscription/API key (X-API-Key header)
- *   LOOP_WEBHOOK_SECRET     — optional HMAC verification for callbacks
+ *   LOOP_WEBHOOK_SECRET     — required HMAC secret for callbacks (fail-closed if unset)
  *   APP_BASE_URL            — public site URL for callback (e.g. https://kalro.store)
  *   LOOP_PAYMENT_INIT_PATH  — default /loop-api/1.0.0/payments/initiate
  *   LOOP_OAUTH_SCOPE        — optional OAuth scope (default: server default scope)
@@ -247,7 +247,7 @@ async function initiatePayment({ order, phone }) {
     merchantReference: order.order_number,
     callbackUrl: callbackUrl(),
     callback_url: callbackUrl(),
-    description: `Kalro Farm order ${order.order_number}`,
+    description: `Soko Mkononi order ${order.order_number}`,
   };
 
   const data = await fetchJson(`${baseUrl()}${paymentInitPath()}`, {
@@ -283,12 +283,24 @@ async function initiatePayment({ order, phone }) {
   };
 }
 
+const PLACEHOLDER_WEBHOOK_SECRETS = new Set([
+  '',
+  'your_webhook_secret_optional',
+  'change_me',
+  'changeme',
+]);
+
 /**
- * Verify webhook signature when LOOP_WEBHOOK_SECRET is set.
+ * Verify webhook HMAC. Fail closed when secret is missing or a known placeholder.
  */
 function verifyWebhookSignature(rawBody, headers = {}) {
   const secret = env('LOOP_WEBHOOK_SECRET');
-  if (!secret || secret === 'your_webhook_secret_optional') return true;
+  if (!secret || PLACEHOLDER_WEBHOOK_SECRETS.has(secret.toLowerCase())) {
+    console.error(
+      '[loop] LOOP_WEBHOOK_SECRET is missing or a placeholder — rejecting callback'
+    );
+    return false;
+  }
 
   const sig =
     headers['x-loop-signature'] ||
@@ -301,7 +313,10 @@ function verifyWebhookSignature(rawBody, headers = {}) {
   const provided = String(sig).replace(/^sha256=/i, '').trim();
 
   try {
-    return crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(provided, 'hex'));
+    const expectedBuf = Buffer.from(expected, 'hex');
+    const providedBuf = Buffer.from(provided, 'hex');
+    if (expectedBuf.length !== providedBuf.length) return false;
+    return crypto.timingSafeEqual(expectedBuf, providedBuf);
   } catch {
     return false;
   }

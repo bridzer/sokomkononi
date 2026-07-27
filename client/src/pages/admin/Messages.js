@@ -68,7 +68,7 @@ export default function AdminMessages() {
                   return to ? (
                     <a
                       href={whatsappUrl(
-                        `Hello ${m.name}, this is Kalro Farm replying to your enquiry.`,
+                        `Hello ${m.name}, this is Soko Mkononi replying to your enquiry.`,
                         to
                       )}
                       target="_blank"

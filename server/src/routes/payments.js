@@ -1,8 +1,19 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { pool, query } = require('../db');
 const loopPayment = require('../services/loopPayment');
+const { optionalAuth } = require('../middleware/auth');
+const { canAccessOrder } = require('../utils/orderAccess');
 
 const router = express.Router();
+
+const paymentActionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many payment requests, try again later' },
+});
 
 async function getSettingsRow() {
   const r = await query('SELECT loop_payments_enabled FROM settings ORDER BY id ASC LIMIT 1');
@@ -13,6 +24,15 @@ async function isLoopEnabledForCheckout() {
   if (!loopPayment.isConfigured()) return false;
   const settings = await getSettingsRow();
   return Boolean(settings.loop_payments_enabled);
+}
+
+function viewTokenFromReq(req) {
+  return (
+    req.body?.view_token ||
+    req.query?.t ||
+    req.headers['x-order-token'] ||
+    ''
+  );
 }
 
 /** Public — which payment methods are available at checkout */
@@ -39,8 +59,8 @@ router.get('/options', async (_req, res, next) => {
   }
 });
 
-/** Initiate Loop payment for an existing pending order */
-router.post('/loop/initiate', async (req, res, next) => {
+/** Initiate Loop payment — owner auth or view_token required */
+router.post('/loop/initiate', paymentActionLimiter, optionalAuth, async (req, res, next) => {
   try {
     if (!(await isLoopEnabledForCheckout())) {
       return res.status(403).json({ error: 'Loop payments are not enabled' });
@@ -56,6 +76,10 @@ router.post('/loop/initiate', async (req, res, next) => {
       return res.status(404).json({ error: 'Order not found' });
     }
     const order = orderRes.rows[0];
+
+    if (!canAccessOrder(order, { viewToken: viewTokenFromReq(req), user: req.user })) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
 
     if (order.payment_method !== 'loop') {
       return res.status(400).json({ error: 'Order is not a Loop payment order' });
@@ -103,26 +127,36 @@ router.post('/loop/initiate', async (req, res, next) => {
   }
 });
 
-/** Poll payment status (checkout success page) */
-router.get('/loop/status/:orderNumber', async (req, res, next) => {
-  try {
-    const orderRes = await query('SELECT order_number, payment_method, payment_status, status FROM orders WHERE order_number = $1', [
-      req.params.orderNumber,
-    ]);
-    if (!orderRes.rowCount) {
-      return res.status(404).json({ error: 'Order not found' });
+/** Poll payment status — owner auth or view_token required */
+router.get(
+  '/loop/status/:orderNumber',
+  paymentActionLimiter,
+  optionalAuth,
+  async (req, res, next) => {
+    try {
+      const orderRes = await query(
+        `SELECT order_number, view_token, user_id, payment_method, payment_status, status
+         FROM orders WHERE order_number = $1`,
+        [req.params.orderNumber]
+      );
+      if (!orderRes.rowCount) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+      const order = orderRes.rows[0];
+      if (!canAccessOrder(order, { viewToken: viewTokenFromReq(req), user: req.user })) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+      res.json({
+        order_number: order.order_number,
+        payment_method: order.payment_method,
+        payment_status: order.payment_status,
+        order_status: order.status,
+      });
+    } catch (err) {
+      next(err);
     }
-    const order = orderRes.rows[0];
-    res.json({
-      order_number: order.order_number,
-      payment_method: order.payment_method,
-      payment_status: order.payment_status,
-      order_status: order.status,
-    });
-  } catch (err) {
-    next(err);
   }
-});
+);
 
 /**
  * Loop webhook — must receive raw body for signature verification.
@@ -174,7 +208,6 @@ async function handleLoopCallback(req, res) {
     }
 
     const newPaymentStatus = parsed.success ? 'paid' : 'failed';
-    const newOrderStatus = parsed.success ? 'confirmed' : order.status;
 
     await client.query(
       `UPDATE orders SET

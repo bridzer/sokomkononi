@@ -60,7 +60,7 @@ export default function AdminSellers() {
   const remove = async (id) => {
     if (
       !window.confirm(
-        'Delete this seller? Their products will default to Kalro Farm Kenya.'
+        'Delete this seller? Their products will default to Soko Mkononi.'
       )
     ) {
       return;
@@ -80,7 +80,7 @@ export default function AdminSellers() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Sellers</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Assign sellers to products. Products without a seller belong to Kalro Farm by default.
+            Assign sellers to products. Products without a seller belong to Soko Mkononi by default.
           </p>
         </div>
         <button className="btn-primary" onClick={() => setEditing({ ...empty })}>

@@ -233,9 +233,9 @@ export default function ContactBar() {
         <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-brand-100/90 min-w-0">
           <TruckIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-300 shrink-0" />
           <span className="truncate">
-            <span className="font-semibold text-white">Free delivery</span>
-            <span className="hidden sm:inline"> · Vaccinated &amp; disease-free stock</span>
-            <span className="sm:hidden"> countrywide</span>
+            <span className="font-semibold text-white">Farm marketplace</span>
+            <span className="hidden sm:inline"> · Connecting farmers globally</span>
+            <span className="sm:hidden"> · WhatsApp orders</span>
           </span>
         </div>
 

@@ -210,7 +210,7 @@ export default function MultiImageUpload({
       </div>
 
       <p className="text-xs text-slate-500 mt-2">
-        JPG, PNG, WEBP, GIF or SVG · up to 20 MB each · max {max} images. The first
+        JPG, PNG, WEBP or GIF · up to 20 MB each · max {max} images. The first
         image is used as the product cover; drag the arrows to reorder or click{' '}
         <span className="text-brand-700 font-semibold">★</span> to promote a photo to cover.
       </p>
@@ -218,7 +218,7 @@ export default function MultiImageUpload({
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,.jpg,.jpeg,.png,.webp,.gif,.svg"
+        accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
         multiple
         className="hidden"
         onChange={onInputChange}

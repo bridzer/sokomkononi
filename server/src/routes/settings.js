@@ -26,7 +26,8 @@ router.get('/public', async (_req, res, next) => {
   }
 });
 
-router.get('/', async (_req, res, next) => {
+/** Full settings including callback URL — admin only */
+router.get('/', requireAdmin, async (_req, res, next) => {
   try {
     const result = await query('SELECT * FROM settings ORDER BY id ASC LIMIT 1');
     const settings = result.rows[0] || null;

@@ -24,7 +24,7 @@ const fs = require('fs');
 const path = require('path');
 
 const BASE = process.env.TEST_BASE_URL || 'http://localhost:5000';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@kalrofarm.co.ke';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@sokomkononi.co.ke';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin@1234';
 
 // A 2×2 red-ish PNG. Kept inline so this script works without any test assets.

@@ -1,11 +1,41 @@
 const jwt = require('jsonwebtoken');
 
+const WEAK_SECRETS = new Set(['', 'dev_secret', 'change_me', 'changeme', 'secret']);
+
+function isWeakJwtSecret(secret) {
+  const s = String(secret || '').trim().toLowerCase();
+  if (!s || WEAK_SECRETS.has(s)) return true;
+  if (s.includes('change_me') || s.includes('changeme')) return true;
+  return false;
+}
+
+function resolveJwtSecret() {
+  const secret = (process.env.JWT_SECRET || '').trim();
+  const weak = isWeakJwtSecret(secret);
+  if (process.env.NODE_ENV === 'production') {
+    if (weak || secret.length < 24) {
+      throw new Error(
+        'JWT_SECRET must be set to a strong random value (≥24 chars) in production'
+      );
+    }
+    return secret;
+  }
+  if (!secret) {
+    console.warn('[auth] JWT_SECRET unset — using insecure dev fallback. Do not use in production.');
+    return 'dev_secret';
+  }
+  if (weak || secret.length < 16) {
+    console.warn('[auth] JWT_SECRET looks weak — set a long random value before deploying.');
+  }
+  return secret;
+}
+
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'Authentication required' });
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
+    const payload = jwt.verify(token, resolveJwtSecret());
     req.user = payload;
     next();
   } catch (err) {
@@ -28,7 +58,7 @@ function optionalAuth(req, _res, next) {
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return next();
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
+    req.user = jwt.verify(token, resolveJwtSecret());
   } catch {
     /* ignore invalid token for optional auth */
   }
@@ -38,9 +68,9 @@ function optionalAuth(req, _res, next) {
 function signToken(user) {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role, name: user.name },
-    process.env.JWT_SECRET || 'dev_secret',
+    resolveJwtSecret(),
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 }
 
-module.exports = { requireAuth, requireAdmin, optionalAuth, signToken };
+module.exports = { requireAuth, requireAdmin, optionalAuth, signToken, resolveJwtSecret };

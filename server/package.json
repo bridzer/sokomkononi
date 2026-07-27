@@ -2,7 +2,7 @@
   "name": "kalro-farm-server",
   "version": "1.0.0",
   "private": true,
-  "description": "Kalro Farm Kenya backend API",
+  "description": "Soko Mkononi backend API",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

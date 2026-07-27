@@ -9,11 +9,24 @@ function escapeHtml(value) {
 }
 
 function getSiteBaseUrl(req) {
-  const fromEnv = (process.env.APP_BASE_URL || process.env.CLIENT_URL || '').trim().replace(/\/+$/, '');
-  if (fromEnv) return fromEnv;
-  const proto = req.get('x-forwarded-proto') || req.protocol || 'https';
-  const host = req.get('x-forwarded-host') || req.get('host');
-  return host ? `${proto}://${host}` : 'https://kalro.store';
+  const fromEnv = (process.env.APP_BASE_URL || process.env.CLIENT_URL || '')
+    .trim()
+    .replace(/\/+$/, '');
+  // Never treat CORS "*" as a site origin.
+  if (fromEnv && fromEnv !== '*') return fromEnv;
+
+  // Production: never derive absolute URLs from Host / X-Forwarded-Host (poisoning).
+  if (process.env.NODE_ENV === 'production') {
+    console.warn(
+      '[productShare] APP_BASE_URL/CLIENT_URL unset in production — using https://kalro.store'
+    );
+    return 'https://kalro.store';
+  }
+
+  // Local/dev only: allow request Host so OG tags work without env.
+  const proto = req.get('x-forwarded-proto') || req.protocol || 'http';
+  const host = req.get('host');
+  return host ? `${proto}://${host}` : 'http://localhost:3000';
 }
 
 function toAbsoluteMediaUrl(url, siteBase) {
@@ -42,7 +55,7 @@ function buildShareDescription(product) {
     if (product.breed) bits.push(product.breed);
     if (product.age_stage) bits.push(product.age_stage);
     if (price) bits.push(price);
-    bits.push('Free countrywide delivery from Kalro Farm Kenya.');
+    bits.push('Free countrywide delivery from Soko Mkononi.');
   }
   const text = bits.filter(Boolean).join(' · ');
   return text.length > 300 ? `${text.slice(0, 297)}…` : text;
@@ -52,8 +65,8 @@ function buildProductMeta(product, siteBase) {
   const pageUrl = `${siteBase.replace(/\/+$/, '')}/product/${encodeURIComponent(product.slug)}`;
   const imageUrl =
     toAbsoluteMediaUrl(product.image_url, siteBase) ||
-    `${siteBase.replace(/\/+$/, '')}/kalro-logo.png`;
-  const title = `${product.name} | Kalro Farm Kenya`;
+    `${siteBase.replace(/\/+$/, '')}/soko-mkononi-logo.png`;
+  const title = `${product.name} | Soko Mkononi`;
   const description = buildShareDescription(product);
 
   return { pageUrl, imageUrl, title, description };
@@ -77,7 +90,7 @@ function injectProductShareTags(html, product, siteBase) {
   const tags = [
     `<meta name="description" content="${escapeHtml(description)}" />`,
     `<meta property="og:type" content="product" />`,
-    `<meta property="og:site_name" content="Kalro Farm Kenya" />`,
+    `<meta property="og:site_name" content="Soko Mkononi" />`,
     `<meta property="og:title" content="${escapeHtml(title)}" />`,
     `<meta property="og:description" content="${escapeHtml(description)}" />`,
     `<meta property="og:url" content="${escapeHtml(pageUrl)}" />`,

@@ -1,23 +1,28 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { pool, query } = require('../db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
 const {
   DELIVERY_MIN_DAYS,
   DELIVERY_MAX_DAYS,
   deliveryLabel,
 } = require('../constants/delivery');
+const {
+  genOrderNumber,
+  genViewToken,
+  toPublicOrder,
+  canAccessOrder,
+} = require('../utils/orderAccess');
 
 const router = express.Router();
 
-function genOrderNumber() {
-  const now = new Date();
-  const stamp =
-    now.getFullYear().toString() +
-    String(now.getMonth() + 1).padStart(2, '0') +
-    String(now.getDate()).padStart(2, '0');
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  return `KF-${stamp}-${rand}`;
-}
+const lookupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many order lookups, try again later' },
+});
 
 // Place order — must be logged in; order is always assigned to the current user
 router.post('/', requireAuth, async (req, res, next) => {
@@ -63,6 +68,7 @@ router.post('/', requireAuth, async (req, res, next) => {
     await client.query('BEGIN');
 
     const orderNumber = genOrderNumber();
+    const viewToken = genViewToken();
     const productIds = items.map((i) => Number(i.product_id));
     const productsRes = await client.query(
       `SELECT id, name, price, price_type, price_max, stock, is_active FROM products WHERE id = ANY($1::int[])`,
@@ -115,13 +121,14 @@ router.post('/', requireAuth, async (req, res, next) => {
 
     const orderRes = await client.query(
       `INSERT INTO orders
-        (order_number, user_id, customer_name, customer_phone, customer_email,
+        (order_number, view_token, user_id, customer_name, customer_phone, customer_email,
          delivery_address, county, notes, total_amount, status, payment_method, payment_status,
          delivery_min_days, delivery_max_days)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
        RETURNING *`,
       [
         orderNumber,
+        viewToken,
         user_id,
         customer_name,
         customer_phone,
@@ -154,6 +161,10 @@ router.post('/', requireAuth, async (req, res, next) => {
     await client.query('COMMIT');
 
     const itemsRes = await query('SELECT * FROM order_items WHERE order_id=$1', [order.id]);
+    const publicOrder = {
+      ...toPublicOrder(order, itemsRes.rows),
+      view_token: order.view_token,
+    };
 
     let paymentInit = null;
     if (payment_method === 'loop') {
@@ -184,17 +195,13 @@ router.post('/', requireAuth, async (req, res, next) => {
         );
         return res.status(payErr.status === 401 ? 502 : payErr.status || 502).json({
           error: payErr.expose ? payErr.message : 'Could not initiate Loop payment',
-          order: { ...order, items: itemsRes.rows, payment_status: 'failed' },
+          order: { ...publicOrder, payment_status: 'failed' },
         });
       }
     }
 
     res.status(201).json({
-      order: {
-        ...order,
-        items: itemsRes.rows,
-        delivery_label: deliveryLabel(order.delivery_min_days, order.delivery_max_days),
-      },
+      order: publicOrder,
       payment:
         payment_method === 'loop' && paymentInit
           ? {
@@ -245,20 +252,32 @@ router.get('/mine', requireAuth, async (req, res, next) => {
   }
 });
 
-// Public order lookup by order_number (for confirmation page)
-router.get('/lookup/:orderNumber', async (req, res, next) => {
+/**
+ * Order confirmation lookup — requires view_token (?t=) or authenticated owner/admin.
+ * Returns a public DTO (not SELECT *).
+ */
+router.get('/lookup/:orderNumber', lookupLimiter, optionalAuth, async (req, res, next) => {
   try {
-    const o = await query('SELECT * FROM orders WHERE order_number=$1', [req.params.orderNumber]);
+    const o = await query(
+      `SELECT id, order_number, view_token, user_id, customer_name, customer_phone,
+              delivery_address, county, total_amount, status, payment_method, payment_status,
+              delivery_min_days, delivery_max_days
+       FROM orders WHERE order_number=$1`,
+      [req.params.orderNumber]
+    );
     if (!o.rowCount) return res.status(404).json({ error: 'Order not found' });
-    const items = await query('SELECT * FROM order_items WHERE order_id=$1', [o.rows[0].id]);
+
     const order = o.rows[0];
-    res.json({
-      order: {
-        ...order,
-        items: items.rows,
-        delivery_label: deliveryLabel(order.delivery_min_days, order.delivery_max_days),
-      },
-    });
+    const viewToken = req.query.t || req.headers['x-order-token'];
+    if (!canAccessOrder(order, { viewToken, user: req.user })) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const items = await query(
+      'SELECT id, product_name, quantity, unit_price, subtotal FROM order_items WHERE order_id=$1',
+      [order.id]
+    );
+    res.json({ order: toPublicOrder(order, items.rows) });
   } catch (err) {
     next(err);
   }

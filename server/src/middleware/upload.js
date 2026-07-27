@@ -6,12 +6,12 @@ const { getStorage } = require('../storage');
 
 ensureUploadDir();
 
+// SVG disallowed — browsers may execute embedded scripts when served as image/svg+xml.
 const ALLOWED_MIME = new Set([
   'image/jpeg',
   'image/png',
   'image/webp',
   'image/gif',
-  'image/svg+xml',
 ]);
 
 /** Map non-standard browser MIME strings to canonical types. */
@@ -27,7 +27,6 @@ const EXT_TO_MIME = {
   '.png': 'image/png',
   '.webp': 'image/webp',
   '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
 };
 
 function normalizeMime(mimetype) {
@@ -42,7 +41,7 @@ function mimeFromExtension(filename) {
 
 function buildFilename(originalname, mimetype) {
   const ext = (path.extname(originalname) || '').toLowerCase().slice(0, 8);
-  const safeExt = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'].includes(ext)
+  const safeExt = ['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(ext)
     ? ext
     : (() => {
         const byMime = {
@@ -50,7 +49,6 @@ function buildFilename(originalname, mimetype) {
           'image/png': '.png',
           'image/webp': '.webp',
           'image/gif': '.gif',
-          'image/svg+xml': '.svg',
         };
         return byMime[normalizeMime(mimetype)] || '.jpg';
       })();
@@ -81,7 +79,7 @@ function fileFilter(_req, file, cb) {
     return cb(
       Object.assign(
         new Error(
-          `Only JPG, PNG, WEBP, GIF or SVG images are allowed (received: ${file.mimetype || 'unknown'})`
+          `Only JPG, PNG, WEBP or GIF images are allowed (received: ${file.mimetype || 'unknown'})`
         ),
         { status: 415, expose: true }
       )

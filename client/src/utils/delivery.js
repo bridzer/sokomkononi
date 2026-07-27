@@ -6,7 +6,7 @@ export function deliveryLabel(min = DELIVERY_MIN_DAYS, max = DELIVERY_MAX_DAYS) 
   return `${min}–${max} working days`;
 }
 
-export const DEFAULT_SELLER_NAME = 'Kalro Farm Kenya';
+export const DEFAULT_SELLER_NAME = 'Soko Mkononi';
 
 export function getSellerDisplayName(product) {
   return product?.seller_display_name || product?.seller_name || DEFAULT_SELLER_NAME;

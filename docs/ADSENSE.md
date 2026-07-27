@@ -1,6 +1,6 @@
 # Google AdSense — Native Ads Integration
 
-This document covers the Kalro Farm AdSense native in-feed ad implementation.
+This document covers the Soko Mkononi AdSense native in-feed ad implementation.
 
 ## Overview
 

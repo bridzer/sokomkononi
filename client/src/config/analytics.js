@@ -24,11 +24,11 @@ const analyticsConfig = {
   businessName: (
     process.env.REACT_APP_GA_BUSINESS_NAME ||
     process.env.REACT_APP_BUSINESS_NAME ||
-    'Kalro Farm Kenya'
+    'Soko Mkononi'
   ).trim(),
 
   /** Site / stream name for page_view page_location context */
-  siteName: (process.env.REACT_APP_GA_SITE_NAME || 'Kalro Farm Kenya').trim(),
+  siteName: (process.env.REACT_APP_GA_SITE_NAME || 'Soko Mkononi').trim(),
 
   /** ISO 4217 currency for ecommerce events */
   currency: (process.env.REACT_APP_GA_CURRENCY || 'KES').trim().toUpperCase(),

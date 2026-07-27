@@ -26,12 +26,12 @@ export function getProductPageUrl(slug, origin = getSiteOrigin()) {
 }
 
 export function buildProductShareText(product) {
-  if (!product) return 'Kalro Farm Kenya';
+  if (!product) return 'Soko Mkononi';
   const price = formatProductPrice(product);
   const parts = [product.name];
   if (price) parts.push(price);
   if (product.breed) parts.push(product.breed);
-  parts.push('Kalro Farm Kenya');
+  parts.push('Soko Mkononi');
   return parts.filter(Boolean).join(' · ');
 }
 

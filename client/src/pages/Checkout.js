@@ -147,8 +147,11 @@ export default function Checkout() {
       }
 
       clear();
-      navigate(`/order-success/${data.order.order_number}`, {
-        state: { order: data.order, payment: data.payment },
+      const orderNumber = data.order.order_number;
+      const viewToken = data.order.view_token;
+      const qs = viewToken ? `?t=${encodeURIComponent(viewToken)}` : '';
+      navigate(`/order-success/${orderNumber}${qs}`, {
+        state: { order: data.order, payment: data.payment, viewToken },
       });
     } catch (err) {
       if (err.response?.status === 401) {

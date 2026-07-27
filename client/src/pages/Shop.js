@@ -191,8 +191,8 @@ export default function Shop() {
   const share = async () => {
     const url = window.location.href;
     const shareData = {
-      title: `Kalro Farm — ${title}`,
-      text: `Check out ${title.toLowerCase()} on Kalro Farm Kenya.`,
+      title: `Soko Mkononi — ${title}`,
+      text: `Check out ${title.toLowerCase()} on Soko Mkononi — Kenya’s agricultural marketplace.`,
       url,
     };
     try {

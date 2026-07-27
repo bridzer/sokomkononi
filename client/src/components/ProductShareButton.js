@@ -221,7 +221,7 @@ export default function ProductShareButton({
           </div>
 
           <p className="mt-4 text-xs text-slate-500">
-            Friends who tap your link will see this product on Kalro Farm Kenya.
+            Friends who tap your link will see this product on Soko Mkononi.
           </p>
 
           <div className="mt-4 grid grid-cols-4 gap-2">

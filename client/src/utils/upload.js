@@ -14,7 +14,6 @@ const ALLOWED_MIME = new Set([
   'image/png',
   'image/webp',
   'image/gif',
-  'image/svg+xml',
 ]);
 
 /** Non-standard MIME strings some browsers/OSes report. */
@@ -30,7 +29,6 @@ const EXT_TO_MIME = {
   '.png': 'image/png',
   '.webp': 'image/webp',
   '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
 };
 
 /**
@@ -57,7 +55,7 @@ export function isAllowedImageFile(file) {
 export function validateImageFile(file) {
   if (!file) return 'No file selected';
   if (!isAllowedImageFile(file)) {
-    return `${file.name}: only JPG, PNG, WEBP, GIF or SVG images are allowed`;
+    return `${file.name}: only JPG, PNG, WEBP or GIF images are allowed`;
   }
   if (file.size > MAX_UPLOAD_BYTES) {
     return `${file.name}: exceeds 20 MB`;

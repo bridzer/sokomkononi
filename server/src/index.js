@@ -34,6 +34,15 @@ const {
   injectProductShareTags,
 } = require('./utils/productShare');
 const { getStorage } = require('./storage');
+const { resolveJwtSecret } = require('./middleware/auth');
+
+// Fail fast if production JWT is missing/weak.
+try {
+  resolveJwtSecret();
+} catch (err) {
+  console.error(`[startup] ${err.message}`);
+  process.exit(1);
+}
 
 const app = express();
 app.set('trust proxy', 1); // required behind Railway/Nginx for correct client IP + rate limiting
@@ -167,12 +176,16 @@ const apiLimiter = rateLimit({
 app.use('/api', apiLimiter);
 
 app.get('/api/health', (_req, res) => {
-  res.json({
+  const body = {
     status: 'ok',
     service: 'kalro-farm-api',
     time: new Date().toISOString(),
-    uploads: getUploadDiagnostics(),
-  });
+  };
+  // Detailed upload diagnostics only in non-production (recon surface reduction).
+  if (process.env.NODE_ENV !== 'production') {
+    body.uploads = getUploadDiagnostics();
+  }
+  res.json(body);
 });
 
 app.use('/api/auth', authRoutes);
@@ -262,6 +275,20 @@ async function ensureSchema() {
     const schemaPath = path.join(__dirname, '..', 'sql', 'schema.sql');
     const sql = fs.readFileSync(schemaPath, 'utf8');
     await pool.query(sql);
+    // Backfill opaque view tokens for legacy orders (needed after AS++ hardening).
+    const crypto = require('crypto');
+    const missing = await pool.query(
+      `SELECT id FROM orders WHERE view_token IS NULL LIMIT 500`
+    );
+    for (const row of missing.rows) {
+      await pool.query('UPDATE orders SET view_token = $1 WHERE id = $2 AND view_token IS NULL', [
+        crypto.randomBytes(24).toString('hex'),
+        row.id,
+      ]);
+    }
+    if (missing.rowCount) {
+      console.log(`[startup] Backfilled view_token on ${missing.rowCount} order(s).`);
+    }
     console.log('[startup] Schema sync OK.');
   } catch (err) {
     console.warn(
@@ -291,7 +318,7 @@ ensureSchema()
   .finally(() => {
     app.listen(PORT, () => {
       console.log(
-        `Kalro Farm ${clientBuildExists ? 'app' : 'API'} listening on port ${PORT}` +
+        `Soko Mkononi ${clientBuildExists ? 'app' : 'API'} listening on port ${PORT}` +
           (process.env.NODE_ENV === 'production' ? ' (production)' : '')
       );
     });
