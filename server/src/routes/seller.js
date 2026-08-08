@@ -77,8 +77,17 @@ router.get('/me', async (req, res, next) => {
 
 router.put('/me', async (req, res, next) => {
   try {
-    const { phone, whatsapp, bio, avatar_url } = req.body || {};
+    const {
+      phone,
+      whatsapp,
+      bio,
+      avatar_url,
+      service_counties: serviceCountiesRaw,
+      pickup_label: pickupLabel,
+      pickup_notes: pickupNotes,
+    } = req.body || {};
     const { normalizeSellerAddress } = require('../utils/address');
+    const { parseServiceCounties } = require('../utils/proximity');
     const addr = normalizeSellerAddress(req.body || {}, { required: false });
     if (!addr.ok) return res.status(400).json({ error: addr.error });
     const a = addr.fields;
@@ -86,6 +95,21 @@ router.put('/me', async (req, res, next) => {
     const nextAvatar = hasAvatar
       ? (avatar_url ? String(avatar_url).trim().slice(0, 1000) || null : null)
       : undefined;
+    const hasService = Object.prototype.hasOwnProperty.call(
+      req.body || {},
+      'service_counties'
+    );
+    const hasPickupLabel = Object.prototype.hasOwnProperty.call(
+      req.body || {},
+      'pickup_label'
+    );
+    const hasPickupNotes = Object.prototype.hasOwnProperty.call(
+      req.body || {},
+      'pickup_notes'
+    );
+    const nextService = hasService
+      ? JSON.stringify(parseServiceCounties(serviceCountiesRaw))
+      : null;
     const r = await query(
       `UPDATE sellers SET
          phone = COALESCE($1, phone),
@@ -104,8 +128,11 @@ router.put('/me', async (req, res, next) => {
          latitude = $14,
          longitude = $15,
          avatar_url = CASE WHEN $16::boolean THEN $17 ELSE avatar_url END,
+         service_counties = CASE WHEN $18::boolean THEN $19::jsonb ELSE service_counties END,
+         pickup_label = CASE WHEN $20::boolean THEN $21 ELSE pickup_label END,
+         pickup_notes = CASE WHEN $22::boolean THEN $23 ELSE pickup_notes END,
          updated_at = NOW()
-       WHERE id = $18
+       WHERE id = $24
        RETURNING *`,
       [
         phone !== undefined ? String(phone || '').trim() || null : null,
@@ -125,6 +152,20 @@ router.put('/me', async (req, res, next) => {
         a.longitude,
         hasAvatar,
         nextAvatar ?? null,
+        hasService,
+        nextService ?? '[]',
+        hasPickupLabel,
+        hasPickupLabel
+          ? pickupLabel
+            ? String(pickupLabel).trim().slice(0, 200) || null
+            : null
+          : null,
+        hasPickupNotes,
+        hasPickupNotes
+          ? pickupNotes
+            ? String(pickupNotes).trim() || null
+            : null
+          : null,
         req.seller.id,
       ]
     );
@@ -210,6 +251,8 @@ router.post('/products', async (req, res, next) => {
       category_id, name, description, breed, age_stage, unit,
       stock, image_url, images: imagesInput, is_active,
       fulfilled_by: fulfilledByRaw,
+      lot_status: lotStatusRaw,
+      ready_from: readyFromRaw,
     } = req.body || {};
 
     if (!name?.trim()) {
@@ -237,6 +280,12 @@ router.post('/products', async (req, res, next) => {
       category_id,
     });
 
+    const allowedLot = ['draft', 'listed', 'expired'];
+    const lot_status = allowedLot.includes(lotStatusRaw) ? lotStatusRaw : 'listed';
+    const ready_from = readyFromRaw ? new Date(readyFromRaw) : null;
+    const readyFromVal =
+      ready_from && !Number.isNaN(ready_from.getTime()) ? ready_from.toISOString() : null;
+
     const baseSlug = slugify(name);
     const uniqCheck = await query('SELECT COUNT(*)::int AS c FROM products WHERE slug LIKE $1', [
       `${baseSlug}%`,
@@ -247,9 +296,10 @@ router.post('/products', async (req, res, next) => {
     const r = await query(
       `INSERT INTO products
         (category_id, name, slug, description, breed, age_stage, unit, price, price_type, price_max,
-         stock, image_url, images, is_active, is_featured, seller_id, fulfilled_by, commerce_mode)
+         stock, image_url, images, is_active, is_featured, seller_id, fulfilled_by, commerce_mode,
+         lot_status, ready_from)
        VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,'each'),$8,$9,$10,COALESCE($11,0),$12,$13::jsonb,
-               COALESCE($14,TRUE),FALSE,$15,$16,$17)
+               COALESCE($14,TRUE),FALSE,$15,$16,$17,$18,$19)
        RETURNING *`,
       [
         Number(category_id),
@@ -269,6 +319,8 @@ router.post('/products', async (req, res, next) => {
         req.seller.id,
         fulfilled_by,
         commerce_mode,
+        lot_status,
+        readyFromVal,
       ]
     );
     res.status(201).json({ product: r.rows[0] });
@@ -280,17 +332,20 @@ router.post('/products', async (req, res, next) => {
 router.put('/products/:id', async (req, res, next) => {
   try {
     const owned = await query(
-      'SELECT id FROM products WHERE id=$1 AND seller_id=$2',
+      'SELECT id, stock FROM products WHERE id=$1 AND seller_id=$2',
       [req.params.id, req.seller.id]
     );
     if (!owned.rowCount) {
       return res.status(404).json({ error: 'Listing not found' });
     }
+    const previousStock = Number(owned.rows[0].stock) || 0;
 
     const {
       category_id, name, description, breed, age_stage, unit,
       stock, image_url, images: imagesInput, is_active,
       price_type, fulfilled_by: fulfilledByRaw,
+      lot_status: lotStatusRaw,
+      ready_from: readyFromRaw,
     } = req.body || {};
 
     const hasPricingUpdate =
@@ -330,6 +385,20 @@ router.put('/products/:id', async (req, res, next) => {
       });
     }
 
+    const hasLot = Object.prototype.hasOwnProperty.call(req.body || {}, 'lot_status');
+    const allowedLot = ['draft', 'listed', 'expired', 'sold'];
+    const nextLot =
+      hasLot && allowedLot.includes(lotStatusRaw) ? lotStatusRaw : null;
+    const hasReady = Object.prototype.hasOwnProperty.call(req.body || {}, 'ready_from');
+    let nextReady = null;
+    if (hasReady) {
+      if (!readyFromRaw) nextReady = null;
+      else {
+        const d = new Date(readyFromRaw);
+        nextReady = Number.isNaN(d.getTime()) ? null : d.toISOString();
+      }
+    }
+
     const r = await query(
       `UPDATE products SET
         category_id = COALESCE($1, category_id),
@@ -347,8 +416,10 @@ router.put('/products/:id', async (req, res, next) => {
         is_active = COALESCE($15, is_active),
         fulfilled_by = CASE WHEN $16::boolean THEN $17 ELSE fulfilled_by END,
         commerce_mode = CASE WHEN $18::boolean THEN $19 ELSE commerce_mode END,
+        lot_status = CASE WHEN $20::boolean THEN $21 ELSE lot_status END,
+        ready_from = CASE WHEN $22::boolean THEN $23 ELSE ready_from END,
         updated_at = NOW()
-       WHERE id = $20 AND seller_id = $21
+       WHERE id = $24 AND seller_id = $25
        RETURNING *`,
       [
         category_id ? Number(category_id) : null,
@@ -370,11 +441,26 @@ router.put('/products/:id', async (req, res, next) => {
         nextFulfilledBy,
         Boolean(nextCommerceMode),
         nextCommerceMode,
+        hasLot,
+        nextLot,
+        hasReady,
+        nextReady,
         req.params.id,
         req.seller.id,
       ]
     );
-    res.json({ product: r.rows[0] });
+
+    let waitlist = null;
+    if (stock !== undefined) {
+      const { onStockRestocked } = require('../utils/restockNotify');
+      waitlist = await onStockRestocked(
+        Number(req.params.id),
+        previousStock,
+        Number(stock)
+      );
+    }
+
+    res.json({ product: r.rows[0], waitlist });
   } catch (err) {
     next(err);
   }
@@ -444,6 +530,50 @@ router.get('/orders/:id', async (req, res, next) => {
       [req.params.id, req.seller.id]
     );
     res.json({ order: orderRes.rows[0], items: items.rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Marketplace payout report (manual remittance status). */
+router.get('/payouts', async (req, res, next) => {
+  try {
+    const status = req.query.status;
+    const params = [req.seller.id];
+    let statusSql = '';
+    if (status === 'owed' || status === 'remitted') {
+      params.push(status);
+      statusSql = ` AND pe.status = $${params.length}`;
+    }
+    const rows = await query(
+      `SELECT pe.*, oi.product_name, oi.quantity, o.order_number, o.status AS order_status,
+              o.created_at AS order_created_at
+       FROM seller_payout_entries pe
+       JOIN order_items oi ON oi.id = pe.order_item_id
+       JOIN orders o ON o.id = oi.order_id
+       WHERE pe.seller_id = $1
+         AND o.status <> 'cancelled'
+         ${statusSql}
+       ORDER BY pe.created_at DESC
+       LIMIT 200`,
+      params
+    );
+    const summary = await query(
+      `SELECT
+         COALESCE(SUM(pe.gmv) FILTER (WHERE pe.status = 'owed'), 0)::float AS owed_gmv,
+         COALESCE(SUM(pe.commission) FILTER (WHERE pe.status = 'owed'), 0)::float AS owed_commission,
+         COALESCE(SUM(pe.net_amount) FILTER (WHERE pe.status = 'owed'), 0)::float AS owed_net,
+         COALESCE(SUM(pe.net_amount) FILTER (WHERE pe.status = 'remitted'), 0)::float AS remitted_net
+       FROM seller_payout_entries pe
+       JOIN order_items oi ON oi.id = pe.order_item_id
+       JOIN orders o ON o.id = oi.order_id
+       WHERE pe.seller_id = $1 AND o.status <> 'cancelled'`,
+      [req.seller.id]
+    );
+    res.json({
+      entries: rows.rows,
+      summary: summary.rows[0],
+    });
   } catch (err) {
     next(err);
   }

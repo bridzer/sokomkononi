@@ -165,9 +165,20 @@ export default function OrderSuccess() {
           <h2 className="font-semibold text-slate-800">Order details</h2>
           <div className="mt-2 space-y-2">
             {order.items?.map((it) => (
-              <div key={it.id || `${it.product_name}-${it.quantity}`} className="flex justify-between text-sm border-b border-slate-100 py-1">
+              <div key={it.id || `${it.product_name}-${it.quantity}`} className="flex justify-between text-sm border-b border-slate-100 py-1 gap-2">
                 <span>
                   {it.product_name} × {it.quantity}
+                  {it.commerce_mode === 'retail' && it.product_slug ? (
+                    <>
+                      {' '}
+                      <Link
+                        to={`/product/${it.product_slug}`}
+                        className="text-brand-700 font-semibold hover:underline"
+                      >
+                        Buy again
+                      </Link>
+                    </>
+                  ) : null}
                 </span>
                 <span>{formatKsh(it.subtotal)}</span>
               </div>

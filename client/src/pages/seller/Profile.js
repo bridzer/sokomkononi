@@ -11,7 +11,18 @@ import {
   addressToSellerPayload,
   sellerToAddress,
   validateDeliveryAddress,
+  loadKenyaLocations,
 } from '../../utils/address';
+
+function parseCounties(raw) {
+  if (Array.isArray(raw)) return raw;
+  try {
+    const p = JSON.parse(raw);
+    return Array.isArray(p) ? p : [];
+  } catch {
+    return [];
+  }
+}
 
 export default function SellerProfile() {
   const { seller, setSeller, user } = useAuth();
@@ -21,8 +32,18 @@ export default function SellerProfile() {
     bio: '',
     avatar_url: '',
     address: { ...EMPTY_ADDRESS },
+    service_counties: [],
+    pickup_label: '',
+    pickup_notes: '',
   });
+  const [countyOptions, setCountyOptions] = useState([]);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadKenyaLocations()
+      .then((d) => setCountyOptions(d.counties || []))
+      .catch(() => setCountyOptions([]));
+  }, []);
 
   useEffect(() => {
     if (seller) {
@@ -32,9 +53,21 @@ export default function SellerProfile() {
         bio: seller.bio || '',
         avatar_url: seller.avatar_url || '',
         address: sellerToAddress(seller),
+        service_counties: parseCounties(seller.service_counties),
+        pickup_label: seller.pickup_label || '',
+        pickup_notes: seller.pickup_notes || '',
       });
     }
   }, [seller]);
+
+  const toggleCounty = (county) => {
+    setForm((f) => {
+      const set = new Set(f.service_counties);
+      if (set.has(county)) set.delete(county);
+      else set.add(county);
+      return { ...f, service_counties: [...set].sort() };
+    });
+  };
 
   const save = async (e) => {
     e.preventDefault();
@@ -50,6 +83,9 @@ export default function SellerProfile() {
         whatsapp: form.whatsapp,
         bio: form.bio,
         avatar_url: form.avatar_url || null,
+        service_counties: form.service_counties,
+        pickup_label: form.pickup_label,
+        pickup_notes: form.pickup_notes,
         ...addressToSellerPayload(form.address),
       };
       const { data } = await api.put('/seller/me', payload);
@@ -160,6 +196,53 @@ export default function SellerProfile() {
           required
           showDetect
         />
+
+        <div>
+          <label className="label">Counties you serve</label>
+          <p className="text-xs text-slate-500 mb-2">
+            Leave empty for nationwide. Selecting counties limits Shop filters to buyers in those areas.
+          </p>
+          <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200 p-2 flex flex-wrap gap-1.5">
+            {countyOptions.map((c) => {
+              const on = form.service_counties.includes(c);
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => toggleCounty(c)}
+                  className={`px-2 py-1 rounded-md text-[11px] font-semibold ring-1 ${
+                    on
+                      ? 'bg-brand-50 text-brand-800 ring-brand-300'
+                      : 'bg-white text-slate-600 ring-slate-200'
+                  }`}
+                >
+                  {c}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label className="label">Pickup point name</label>
+            <input
+              className="input w-full"
+              value={form.pickup_label}
+              onChange={(e) => setForm((f) => ({ ...f, pickup_label: e.target.value }))}
+              placeholder="e.g. Farm gate — Gilgil"
+            />
+          </div>
+          <div>
+            <label className="label">Pickup notes</label>
+            <input
+              className="input w-full"
+              value={form.pickup_notes}
+              onChange={(e) => setForm((f) => ({ ...f, pickup_notes: e.target.value }))}
+              placeholder="Landmark, hours, contact…"
+            />
+          </div>
+        </div>
 
         <div>
           <label className="label">Bio</label>

@@ -6,6 +6,13 @@ import ProductListingGrid from '../components/ProductListingGrid';
 import { categoryIcon } from '../utils/categoryIcon';
 import { copyText } from '../utils/format';
 import { trackSearch } from '../utils/analytics';
+import { loadKenyaLocations } from '../utils/address';
+import {
+  countyNameToSlug,
+  countySlugToName,
+  heatLabel,
+  DEFAULT_CORRIDOR,
+} from '../utils/proximity';
 
 const SearchIcon = (p) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" {...p}>
@@ -62,22 +69,33 @@ function CategoryChip({ active, to, icon, label, count }) {
 }
 
 export default function Shop() {
-  const { categorySlug } = useParams();
+  const { categorySlug, countySlug } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const search = searchParams.get('search') || '';
   const sort = searchParams.get('sort') || '';
+  const countyFromQuery = searchParams.get('county') || '';
+  const countyFromPath = countySlug ? countySlugToName(countySlug) : '';
+  const county = countyFromQuery || countyFromPath;
+  const proximity = searchParams.get('proximity') === '1' || searchParams.get('proximity') === 'true';
+  const corridor =
+    searchParams.get('corridor') === '1' || searchParams.get('corridor') === 'true';
 
   const [products, setProducts] = useState([]);
   const [tree, setTree] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState(search);
+  const [counties, setCounties] = useState([]);
+  const [pulse, setPulse] = useState(null);
 
   useEffect(() => setQuery(search), [search]);
 
   useEffect(() => {
     api.get('/categories?tree=true').then((r) => setTree(r.data.categories || []));
+    loadKenyaLocations()
+      .then((data) => setCounties(data.counties || []))
+      .catch(() => setCounties(DEFAULT_CORRIDOR));
   }, []);
 
   const { mainCategory, subCategory, subTabs, productFilterSlug } = useMemo(() => {
@@ -125,21 +143,50 @@ export default function Shop() {
     const params = new URLSearchParams();
     if (productFilterSlug) params.set('category', productFilterSlug);
     if (search) params.set('search', search);
-    if (sort) params.set('sort', sort);
+    if (sort && sort !== 'nearby') params.set('sort', sort);
+    if (county) params.set('county', county);
+    if (proximity || sort === 'nearby') params.set('proximity', 'true');
+    if (corridor) params.set('corridor', 'true');
     params.set('limit', '100');
     api
       .get(`/products?${params.toString()}`)
       .then((r) => setProducts(r.data.products || []))
       .finally(() => setLoading(false));
-  }, [productFilterSlug, search, sort]);
+
+    if (county || search || productFilterSlug) {
+      api
+        .post('/market/search-events', {
+          search_query: search || null,
+          category_slug: productFilterSlug || null,
+          county: county || null,
+        })
+        .catch(() => {});
+    }
+  }, [productFilterSlug, search, sort, county, proximity, corridor]);
 
   useEffect(() => {
     if (search) trackSearch(search);
   }, [search]);
 
-  const title = subCategory?.name || mainCategory?.name || 'All products';
+  useEffect(() => {
+    if (!county && !productFilterSlug) {
+      setPulse(null);
+      return;
+    }
+    const params = new URLSearchParams();
+    if (county) params.set('county', county);
+    if (productFilterSlug) params.set('category', productFilterSlug);
+    api
+      .get(`/market/pulse?${params.toString()}`)
+      .then((r) => setPulse(r.data.pulse))
+      .catch(() => setPulse(null));
+  }, [county, productFilterSlug]);
+
+  const title = county
+    ? `${subCategory?.name || mainCategory?.name || 'Farm goods'} in ${county}`
+    : subCategory?.name || mainCategory?.name || 'All products';
   const totalCount = products.length;
-  const hasActiveFilters = !!(categorySlug || search || sort);
+  const hasActiveFilters = !!(categorySlug || search || sort || county || corridor || proximity);
   const showSubTabs = !!mainCategory;
 
   const submitSearch = (e) => {
@@ -181,10 +228,35 @@ export default function Shop() {
     setSearchParams(p);
   };
 
+  const setCountyFilter = (value) => {
+    const p = new URLSearchParams(searchParams);
+    if (value) {
+      p.set('county', value);
+      p.set('proximity', '1');
+    } else {
+      p.delete('county');
+      p.delete('proximity');
+    }
+    if (countySlug) {
+      const base = categorySlug ? `/shop/${categorySlug}` : '/shop';
+      navigate(`${base}?${p.toString()}`);
+    } else {
+      setSearchParams(p);
+    }
+  };
+
+  const toggleCorridor = () => {
+    const p = new URLSearchParams(searchParams);
+    if (corridor) p.delete('corridor');
+    else p.set('corridor', '1');
+    setSearchParams(p);
+  };
+
   const reset = () => {
     setSearchParams(new URLSearchParams());
     setQuery('');
-    if (mainCategory) navigate(`/shop/${mainCategory.slug}`);
+    if (countySlug) navigate(categorySlug ? `/shop/${categorySlug}` : '/shop');
+    else if (mainCategory) navigate(`/shop/${mainCategory.slug}`);
     else if (categorySlug) navigate('/shop');
   };
 
@@ -239,8 +311,43 @@ export default function Shop() {
             {loading ? '…' : `${totalCount} product${totalCount === 1 ? '' : 's'}`}
           </span>
         </div>
-        {!sort && (
+        {!sort && !county && (
           <p className="mt-1 text-xs text-slate-500">Featured products appear first.</p>
+        )}
+        {county && (
+          <p className="mt-1 text-xs text-slate-500">
+            Showing sellers who serve {county}
+            {proximity || sort === 'nearby' ? ' · nearer listings first' : ''}.
+            {' '}
+            <Link
+              to={`/shop/in/${countyNameToSlug(county)}${categorySlug ? `/${categorySlug}` : ''}`}
+              className="text-brand-700 hover:underline"
+            >
+              County page
+            </Link>
+          </p>
+        )}
+        {pulse && !pulse.insufficient && (
+          <div className="mt-2 inline-flex flex-wrap items-center gap-2 text-xs">
+            <span className="badge bg-brand-50 text-brand-800 ring-1 ring-brand-200">
+              {pulse.count} local listings
+            </span>
+            {heatLabel(pulse.heat) && (
+              <span className="badge bg-amber-50 text-amber-800 ring-1 ring-amber-200">
+                {heatLabel(pulse.heat)}
+              </span>
+            )}
+            {pulse.median_price != null && (
+              <span className="text-slate-500">
+                Median ask KSh {Number(pulse.median_price).toLocaleString()}
+              </span>
+            )}
+          </div>
+        )}
+        {pulse?.insufficient && county && (
+          <p className="mt-2 text-xs text-slate-500">
+            Not enough local data yet for a market pulse in {county}.
+          </p>
         )}
       </div>
 
@@ -362,7 +469,39 @@ export default function Shop() {
           </div>
         </div>
 
-        <div className="mt-2.5 sm:mt-3 flex flex-wrap items-center gap-2 justify-end">
+        <div className="mt-2.5 sm:mt-3 flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 sm:flex-none min-w-[140px]">
+            <label className="sr-only" htmlFor="shop-county">
+              County
+            </label>
+            <select
+              id="shop-county"
+              value={county}
+              onChange={(e) => setCountyFilter(e.target.value)}
+              className="input py-2.5 appearance-none bg-slate-50 border-slate-200 focus:bg-white cursor-pointer w-full"
+            >
+              <option value="">All counties</option>
+              {counties.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onClick={toggleCorridor}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold uppercase tracking-wider ring-1 transition-colors ${
+              corridor
+                ? 'bg-brand-50 text-brand-700 ring-brand-300'
+                : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50'
+            }`}
+            aria-pressed={corridor}
+          >
+            Corridor
+          </button>
+
           <button
             type="button"
             onClick={toggleSort}

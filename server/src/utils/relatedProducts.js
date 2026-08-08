@@ -142,7 +142,48 @@ async function fetchRelatedProducts(product, { limit = 12 } = {}) {
   }
 
   const result = await query(sql, params);
-  return { mode, products: result.rows };
+  let products = result.rows;
+
+  // Marketplace lots: prefer retail inputs / tools as linked upsells.
+  if (product.commerce_mode === 'marketplace') {
+    const retailLim = Math.min(6, lim);
+    const retail = await query(
+      `SELECT ${CARD_SELECT}
+       FROM products p
+       LEFT JOIN categories c ON c.id = p.category_id
+       LEFT JOIN categories pc ON pc.id = c.parent_id
+       LEFT JOIN sellers s ON s.id = p.seller_id AND s.is_active = TRUE
+       WHERE p.is_active = TRUE
+         AND p.id <> $1
+         AND p.commerce_mode = 'retail'
+         AND p.lot_status IN ('listed', 'reserved')
+         AND (
+           pc.slug IN ('soil-science-inputs', 'agricultural-engineering', 'agribusiness')
+           OR c.slug IN ('soil-science-inputs', 'agricultural-engineering', 'agribusiness')
+           OR COALESCE(pc.default_commerce_mode, c.default_commerce_mode) = 'retail'
+         )
+       ORDER BY ${FEATURED_ACTIVE_SQL} DESC, p.created_at DESC
+       LIMIT $2`,
+      [product.id, retailLim]
+    );
+    if (retail.rowCount) {
+      const seen = new Set();
+      const merged = [];
+      for (const row of retail.rows) {
+        if (seen.has(row.id)) continue;
+        seen.add(row.id);
+        merged.push(row);
+      }
+      for (const row of products) {
+        if (seen.has(row.id)) continue;
+        seen.add(row.id);
+        merged.push(row);
+      }
+      products = merged.slice(0, lim);
+    }
+  }
+
+  return { mode, products };
 }
 
 module.exports = { fetchRelatedProducts, getRelatedProductsMode };

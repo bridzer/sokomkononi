@@ -7,6 +7,7 @@ const links = [
   { to: '/seller', label: 'Dashboard', end: true },
   { to: '/seller/listings', label: 'My listings', end: false },
   { to: '/seller/orders', label: 'Orders', end: false },
+  { to: '/seller/payouts', label: 'Payouts', end: false },
   { to: '/seller/profile', label: 'Profile', end: false },
 ];
 

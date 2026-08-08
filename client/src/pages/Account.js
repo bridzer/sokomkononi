@@ -126,8 +126,21 @@ export default function Account() {
 
               <ul className="mt-3 text-sm text-slate-700 space-y-1">
                 {(o.items || []).map((it, i) => (
-                  <li key={i}>
-                    {it.quantity}× {it.product_name}
+                  <li key={i} className="flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      {it.quantity}× {it.product_name}
+                    </span>
+                    {it.commerce_mode === 'retail' && it.product_id && (
+                      <Link
+                        to={`/product/${it.product_slug || ''}`}
+                        className="text-xs font-semibold text-brand-700 hover:underline"
+                        onClick={(e) => {
+                          if (!it.product_slug) e.preventDefault();
+                        }}
+                      >
+                        Buy again
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

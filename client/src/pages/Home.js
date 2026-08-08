@@ -6,6 +6,7 @@ import PhoneButton from '../components/PhoneButton';
 import SafeImage from '../components/SafeImage';
 import GoogleMapSection from '../components/GoogleMapSection';
 import HomeCategorySection from '../components/HomeCategorySection';
+import CorridorProductsRail from '../components/CorridorProductsRail';
 import { BUSINESS } from '../utils/format';
 export default function Home() {
   
@@ -100,6 +101,8 @@ export default function Home() {
       <section className="max-w-7xl mx-auto px-4 py-8 sm:py-10 md:py-10">
         <HomeCategorySection />
       </section>
+
+      <CorridorProductsRail />
 
       {/* -------- Trust / Stats -------- */}
       <StatsSection />

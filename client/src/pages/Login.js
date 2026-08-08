@@ -2,12 +2,18 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { draftToAuthPrefill, loadCheckoutDraft } from '../utils/checkoutDraft';
 
 export default function Login() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({ email: '', password: '' });
+  const prefill =
+    location.state?.prefill ||
+    (location.state?.from === '/checkout/payment' || location.state?.from === '/checkout'
+      ? draftToAuthPrefill(loadCheckoutDraft())
+      : {});
+  const [form, setForm] = useState({ email: prefill.email || '', password: '' });
   const [busy, setBusy] = useState(false);
 
   const redirectTo =
@@ -15,7 +21,6 @@ export default function Login() {
       ? location.state.from
       : location.state?.from?.pathname || '/account';
 
-  // Already logged in — send each role to the right hub
   React.useEffect(() => {
     if (!user) return;
     if (user.role === 'admin') navigate('/admin', { replace: true });
@@ -39,13 +44,22 @@ export default function Login() {
     }
   };
 
+  const checkoutFlow =
+    redirectTo === '/checkout' ||
+    redirectTo === '/checkout/payment' ||
+    redirectTo === '/checkout/account';
+
   return (
     <div className="max-w-md mx-auto px-4 py-12">
       <h1 className="text-2xl font-extrabold text-slate-800">Customer login</h1>
       <p className="mt-1 text-sm text-slate-500">
         Sign in to track your orders
-        {redirectTo === '/checkout' ? ' and complete checkout' : ''}. New here?{' '}
-        <Link to="/register" state={{ from: redirectTo }} className="text-brand-700 font-semibold hover:underline">
+        {checkoutFlow ? ' and complete checkout' : ''}. New here?{' '}
+        <Link
+          to="/register"
+          state={{ from: redirectTo, prefill }}
+          className="text-brand-700 font-semibold hover:underline"
+        >
           Create an account
         </Link>
       </p>

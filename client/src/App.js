@@ -13,6 +13,8 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
+import CheckoutAccount from './pages/CheckoutAccount';
+import CheckoutPayment from './pages/CheckoutPayment';
 import OrderSuccess from './pages/OrderSuccess';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
@@ -41,6 +43,7 @@ import SellerDashboard from './pages/seller/Dashboard';
 import SellerListings from './pages/seller/Listings';
 import SellerOrders from './pages/seller/Orders';
 import SellerProfile from './pages/seller/Profile';
+import SellerPayouts from './pages/seller/Payouts';
 
 export default function App() {
   return (
@@ -48,6 +51,8 @@ export default function App() {
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/shop" element={<Shop />} />
+        <Route path="/shop/in/:countySlug" element={<Shop />} />
+        <Route path="/shop/in/:countySlug/:categorySlug" element={<Shop />} />
         <Route path="/shop/:categorySlug" element={<Shop />} />
         <Route path="/product/:slug" element={<ProductDetail />} />
         <Route path="/about" element={<About />} />
@@ -59,6 +64,8 @@ export default function App() {
         <Route path="/account" element={<Account />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
+        <Route path="/checkout/account" element={<CheckoutAccount />} />
+        <Route path="/checkout/payment" element={<CheckoutPayment />} />
         <Route path="/order-success/:orderNumber" element={<OrderSuccess />} />
         <Route path="*" element={<NotFound />} />
       </Route>
@@ -96,6 +103,7 @@ export default function App() {
         <Route index element={<SellerDashboard />} />
         <Route path="listings" element={<SellerListings />} />
         <Route path="orders" element={<SellerOrders />} />
+        <Route path="payouts" element={<SellerPayouts />} />
         <Route path="profile" element={<SellerProfile />} />
       </Route>
     </Routes>

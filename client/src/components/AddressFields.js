@@ -60,7 +60,7 @@ export default function AddressFields({
   }, [geo.coords]);
 
   useEffect(() => {
-    if (!isKenyaAddress(address)) return;
+    if (String(address.country_code || '').toUpperCase() !== 'KE') return;
     if (kenyaData || loadingKenya) return;
     setLoadingKenya(true);
     loadKenyaLocations()

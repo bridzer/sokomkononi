@@ -28,6 +28,8 @@ const empty = {
   stock: 1,
   images: [],
   is_active: true,
+  lot_status: 'listed',
+  ready_from: '',
 };
 
 function coerceImages(product) {
@@ -41,6 +43,7 @@ export default function SellerListings() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
+  const [comps, setComps] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -64,9 +67,29 @@ export default function SellerListings() {
       category_id: p.category_id || '',
       fulfilled_by: p.fulfilled_by === 'platform' ? 'platform' : 'seller',
       images: coerceImages(p),
+      lot_status: p.lot_status || 'listed',
+      ready_from: p.ready_from ? String(p.ready_from).slice(0, 10) : '',
       ...pricingFromProduct(p),
     });
-  const close = () => setEditing(null);
+  const close = () => {
+    setEditing(null);
+    setComps(null);
+  };
+
+  useEffect(() => {
+    if (!editing?.category_id && !editing?.breed) {
+      setComps(null);
+      return;
+    }
+    const params = new URLSearchParams();
+    if (editing.category_id) params.set('category_id', editing.category_id);
+    if (editing.breed) params.set('breed', editing.breed);
+    if (editing.id) params.set('exclude_id', editing.id);
+    api
+      .get(`/products/comps?${params.toString()}`)
+      .then((r) => setComps(r.data.comps))
+      .catch(() => setComps(null));
+  }, [editing?.category_id, editing?.breed, editing?.id]);
 
   const save = async (e) => {
     e.preventDefault();
@@ -91,8 +114,14 @@ export default function SellerListings() {
         image_url: images[0] || null,
       };
       if (editing.id) {
-        await api.put(`/seller/products/${editing.id}`, payload);
+        const { data } = await api.put(`/seller/products/${editing.id}`, payload);
         toast.success('Listing updated');
+        if (data.waitlist?.restocked && data.waitlist.bookings?.length) {
+          toast(
+            `${data.waitlist.bookings.length} waitlist buyer(s) ready to notify on WhatsApp`,
+            { icon: '📋' }
+          );
+        }
       } else {
         await api.post('/seller/products', payload);
         toast.success('Listing published');
@@ -263,6 +292,20 @@ export default function SellerListings() {
               }}
               onChange={(pricing) => setEditing({ ...editing, ...pricing })}
             />
+            {comps && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                {comps.insufficient ? (
+                  <span>Not enough similar listings yet for a suggested price band.</span>
+                ) : (
+                  <span>
+                    Suggested band from {comps.count} similar lots: KSh{' '}
+                    {Number(comps.min_price).toLocaleString()} –{' '}
+                    {Number(comps.max_price).toLocaleString()} (median{' '}
+                    {Number(comps.median_price).toLocaleString()})
+                  </span>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Stock</label>
@@ -281,6 +324,30 @@ export default function SellerListings() {
                   value={editing.unit}
                   onChange={(e) => setEditing({ ...editing, unit: e.target.value })}
                   placeholder="each / tray / kg"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Lot status</label>
+                <select
+                  className="input w-full"
+                  value={editing.lot_status || 'listed'}
+                  onChange={(e) => setEditing({ ...editing, lot_status: e.target.value })}
+                >
+                  <option value="draft">Draft</option>
+                  <option value="listed">Listed</option>
+                  <option value="expired">Expired</option>
+                  <option value="sold">Sold</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Available from</label>
+                <input
+                  type="date"
+                  className="input w-full"
+                  value={editing.ready_from || ''}
+                  onChange={(e) => setEditing({ ...editing, ready_from: e.target.value })}
                 />
               </div>
             </div>

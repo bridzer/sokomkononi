@@ -361,3 +361,90 @@ CREATE INDEX IF NOT EXISTS idx_sellers_county ON sellers(county);
 
 -- Seller profile photo (shown on storefront + seller hub)
 ALTER TABLE sellers ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
+-- ---------------------------------------------------------------------------
+-- Market discovery + marketplace lot lifecycle (Kaggriculture-inspired)
+-- ---------------------------------------------------------------------------
+
+-- Marketplace lot pipeline (retail products stay listed)
+ALTER TABLE products ADD COLUMN IF NOT EXISTS lot_status VARCHAR(20) NOT NULL DEFAULT 'listed';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS ready_from TIMESTAMPTZ;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS reserve_expires_at TIMESTAMPTZ;
+
+DO $$ BEGIN
+  ALTER TABLE products ADD CONSTRAINT products_lot_status_check
+    CHECK (lot_status IN ('draft', 'listed', 'reserved', 'sold', 'expired'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_products_lot_status ON products(lot_status);
+
+-- Seller service radius + pickup point ("tiles")
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS service_counties JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS pickup_label VARCHAR(200);
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS pickup_notes TEXT;
+
+-- Soft reserves (one active hold per product to prevent double-sell)
+CREATE TABLE IF NOT EXISTS product_reserves (
+  id              SERIAL PRIMARY KEY,
+  product_id      INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  customer_name   VARCHAR(160) NOT NULL,
+  customer_phone  VARCHAR(32) NOT NULL,
+  quantity        INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  source          VARCHAR(32) NOT NULL DEFAULT 'whatsapp_hold'
+                  CHECK (source IN ('whatsapp_hold', 'booking', 'manual')),
+  status          VARCHAR(24) NOT NULL DEFAULT 'active'
+                  CHECK (status IN ('active', 'converted', 'expired', 'cancelled')),
+  expires_at      TIMESTAMPTZ NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_reserves_product ON product_reserves(product_id);
+CREATE INDEX IF NOT EXISTS idx_product_reserves_status ON product_reserves(status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_product_reserves_one_active
+  ON product_reserves(product_id)
+  WHERE status = 'active';
+
+-- Waitlist restock notify tracking
+ALTER TABLE product_bookings ADD COLUMN IF NOT EXISTS notified_at TIMESTAMPTZ;
+
+-- Manual remittance ledger for marketplace seller payouts
+CREATE TABLE IF NOT EXISTS seller_payout_entries (
+  id              SERIAL PRIMARY KEY,
+  order_item_id   INT NOT NULL UNIQUE REFERENCES order_items(id) ON DELETE CASCADE,
+  seller_id       INT NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+  gmv             NUMERIC(12,2) NOT NULL DEFAULT 0,
+  commission      NUMERIC(12,2) NOT NULL DEFAULT 0,
+  net_amount      NUMERIC(12,2) NOT NULL DEFAULT 0,
+  status          VARCHAR(24) NOT NULL DEFAULT 'owed'
+                  CHECK (status IN ('owed', 'remitted')),
+  remitted_at     TIMESTAMPTZ,
+  notes           TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_seller_payout_entries_seller ON seller_payout_entries(seller_id);
+CREATE INDEX IF NOT EXISTS idx_seller_payout_entries_status ON seller_payout_entries(status);
+
+-- Lightweight search demand log (Shop / county pages)
+CREATE TABLE IF NOT EXISTS search_events (
+  id              SERIAL PRIMARY KEY,
+  search_query    VARCHAR(200),
+  category_slug   VARCHAR(140),
+  county          VARCHAR(120),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_search_events_created ON search_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_search_events_county ON search_events(county);
+
+-- Discovery / hold settings
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS corridor_counties JSONB NOT NULL DEFAULT '["Nakuru","Nyandarua","Kiambu","Nairobi"]'::jsonb;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS reserve_hold_hours INT NOT NULL DEFAULT 24;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS market_pulse_min_listings INT NOT NULL DEFAULT 5;
+
+UPDATE settings
+SET corridor_counties = '["Nakuru","Nyandarua","Kiambu","Nairobi"]'::jsonb
+WHERE corridor_counties IS NULL OR corridor_counties = '[]'::jsonb;

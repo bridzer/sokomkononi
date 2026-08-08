@@ -48,7 +48,10 @@ function toPublicOrder(order, items = []) {
     delivery_label: deliveryLabel(order.delivery_min_days, order.delivery_max_days),
     items: (items || []).map((it) => ({
       id: it.id,
+      product_id: it.product_id || null,
       product_name: it.product_name,
+      product_slug: it.product_slug || null,
+      commerce_mode: it.commerce_mode || null,
       quantity: it.quantity,
       unit_price: it.unit_price,
       subtotal: it.subtotal,

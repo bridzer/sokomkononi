@@ -821,11 +821,18 @@ router.put('/sellers/:id', async (req, res, next) => {
     const {
       name, phone, email, whatsapp, bio, is_active,
       is_verified, delivered_count, commission_pct, avatar_url,
+      service_counties: serviceCountiesRaw,
+      pickup_label: pickupLabel,
+      pickup_notes: pickupNotes,
     } = req.body || {};
     const hasCommission = Object.prototype.hasOwnProperty.call(req.body || {}, 'commission_pct');
     const hasAvatar = Object.prototype.hasOwnProperty.call(req.body || {}, 'avatar_url');
+    const hasService = Object.prototype.hasOwnProperty.call(req.body || {}, 'service_counties');
+    const hasPickupLabel = Object.prototype.hasOwnProperty.call(req.body || {}, 'pickup_label');
+    const hasPickupNotes = Object.prototype.hasOwnProperty.call(req.body || {}, 'pickup_notes');
     const { clampCommissionPct } = require('../constants/commerce');
     const { normalizeSellerAddress } = require('../utils/address');
+    const { parseServiceCounties } = require('../utils/proximity');
     const addr = normalizeSellerAddress(req.body || {}, { required: false });
     if (!addr.ok) return res.status(400).json({ error: addr.error });
     const a = addr.fields;
@@ -837,6 +844,9 @@ router.put('/sellers/:id', async (req, res, next) => {
     const nextAvatar = hasAvatar
       ? (avatar_url ? String(avatar_url).trim().slice(0, 1000) || null : null)
       : undefined;
+    const nextService = hasService
+      ? JSON.stringify(parseServiceCounties(serviceCountiesRaw))
+      : null;
     const r = await query(
       `UPDATE sellers SET
          name = COALESCE($1, name),
@@ -861,8 +871,11 @@ router.put('/sellers/:id', async (req, res, next) => {
          latitude = $21,
          longitude = $22,
          avatar_url = CASE WHEN $23::boolean THEN $24 ELSE avatar_url END,
+         service_counties = CASE WHEN $25::boolean THEN $26::jsonb ELSE service_counties END,
+         pickup_label = CASE WHEN $27::boolean THEN $28 ELSE pickup_label END,
+         pickup_notes = CASE WHEN $29::boolean THEN $30 ELSE pickup_notes END,
          updated_at = NOW()
-       WHERE id = $25
+       WHERE id = $31
        RETURNING *`,
       [
         name?.trim() || null,
@@ -889,11 +902,63 @@ router.put('/sellers/:id', async (req, res, next) => {
         a.longitude,
         hasAvatar,
         nextAvatar ?? null,
+        hasService,
+        nextService ?? '[]',
+        hasPickupLabel,
+        hasPickupLabel
+          ? pickupLabel
+            ? String(pickupLabel).trim().slice(0, 200) || null
+            : null
+          : null,
+        hasPickupNotes,
+        hasPickupNotes
+          ? pickupNotes
+            ? String(pickupNotes).trim() || null
+            : null
+          : null,
         req.params.id,
       ]
     );
     if (!r.rowCount) return res.status(404).json({ error: 'Seller not found' });
     res.json({ seller: r.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Mark marketplace payout entries as remitted (manual M-Pesa). */
+router.post('/payouts/:id/remit', async (req, res, next) => {
+  try {
+    const notes = req.body?.notes ? String(req.body.notes).slice(0, 500) : null;
+    const r = await query(
+      `UPDATE seller_payout_entries
+       SET status = 'remitted', remitted_at = NOW(), notes = COALESCE($2, notes), updated_at = NOW()
+       WHERE id = $1 AND status = 'owed'
+       RETURNING *`,
+      [req.params.id, notes]
+    );
+    if (!r.rowCount) {
+      return res.status(404).json({ error: 'Owed payout entry not found' });
+    }
+    res.json({ entry: r.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/payouts', async (req, res, next) => {
+  try {
+    const r = await query(
+      `SELECT pe.*, s.name AS seller_name, oi.product_name, o.order_number
+       FROM seller_payout_entries pe
+       JOIN sellers s ON s.id = pe.seller_id
+       JOIN order_items oi ON oi.id = pe.order_item_id
+       JOIN orders o ON o.id = oi.order_id
+       WHERE o.status <> 'cancelled'
+       ORDER BY pe.status ASC, pe.created_at DESC
+       LIMIT 300`
+    );
+    res.json({ entries: r.rows });
   } catch (err) {
     next(err);
   }

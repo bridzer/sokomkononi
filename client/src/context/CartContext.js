@@ -57,6 +57,7 @@ export function CartProvider({ children }) {
         ...prev,
         {
           product_id: product.id,
+          slug: product.slug || null,
           name: product.name,
           price: Number(product.price),
           price_type: product.price_type || 'fixed',

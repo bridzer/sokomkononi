@@ -12,7 +12,8 @@
     "db:reset": "node src/scripts/migrate.js reset && node src/scripts/seed.js",
     "db:cleanup:images": "node src/scripts/cleanup-images.js",
     "test:upload": "node src/scripts/test-upload.js",
-    "test:pricing": "node src/scripts/test-pricing.js"
+    "test:pricing": "node src/scripts/test-pricing.js",
+    "test:market": "node src/scripts/test-market-features.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1089.0",

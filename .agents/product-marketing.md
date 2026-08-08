@@ -105,7 +105,7 @@
 ## Goals
 **Business goal:** Become Kenya’s go-to agricultural marketplace connecting farmers and buyers
 **Conversion action:** Browse → WhatsApp/order (primary); complete checkout (secondary)
-**Current metrics:** Early hybrid build — multi-seller catalog, commerce modes, commission snapshots, timed featured listings; seller self-service / escrow / auctions still ahead
+**Current metrics:** Hybrid build — multi-seller catalog, commerce modes, commission snapshots, timed featured listings, county/corridor discovery, marketplace soft holds + lot states, seller payout report; escrow / auctions still deferred
 
 ## Hybrid model phases (Soko Mkononi)
 1. **Now** — Encode marketplace vs retail on products; commission on marketplace seller lines; timed featured listings; one checkout

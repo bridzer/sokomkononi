@@ -92,9 +92,12 @@ router.post('/', requireAuth, async (req, res, next) => {
     const orderNumber = genOrderNumber();
     const viewToken = genViewToken();
     const productIds = items.map((i) => Number(i.product_id));
+    const { expireStaleReserves, getActiveReserve, phonesMatch } = require('../utils/reserves');
+    await expireStaleReserves((text, params) => client.query(text, params));
+
     const productsRes = await client.query(
       `SELECT p.id, p.name, p.price, p.price_type, p.price_max, p.stock, p.is_active,
-              p.seller_id, p.fulfilled_by, p.commerce_mode,
+              p.seller_id, p.fulfilled_by, p.commerce_mode, p.lot_status, p.ready_from,
               s.commission_pct AS seller_commission_pct
        FROM products p
        LEFT JOIN sellers s ON s.id = p.seller_id
@@ -127,6 +130,15 @@ router.post('/', requireAuth, async (req, res, next) => {
         });
       }
       const qty = Math.max(1, Number(item.quantity) || 1);
+      if (
+        normalizeCommerceMode(p.commerce_mode) === 'marketplace' &&
+        ['sold', 'expired', 'draft'].includes(p.lot_status)
+      ) {
+        throw Object.assign(
+          new Error(`"${p.name}" is not available for purchase right now.`),
+          { status: 400, expose: true }
+        );
+      }
       if (Number(p.stock) <= 0) {
         throw Object.assign(
           new Error(
@@ -142,6 +154,21 @@ router.post('/', requireAuth, async (req, res, next) => {
           ),
           { status: 400, expose: true }
         );
+      }
+      if (normalizeCommerceMode(p.commerce_mode) === 'marketplace') {
+        const activeReserve = await getActiveReserve(p.id, (text, params) =>
+          client.query(text, params)
+        );
+        if (activeReserve && !phonesMatch(activeReserve.customer_phone, customer_phone)) {
+          throw Object.assign(
+            new Error(
+              `"${p.name}" is on hold for another buyer until ${new Date(
+                activeReserve.expires_at
+              ).toLocaleString()}.`
+            ),
+            { status: 409, expose: true }
+          );
+        }
       }
       const unit = Number(p.price);
       const subtotal = unit * qty;
@@ -225,11 +252,12 @@ router.post('/', requireAuth, async (req, res, next) => {
     const order = orderRes.rows[0];
 
     for (const it of insertItems) {
-      await client.query(
+      const oi = await client.query(
         `INSERT INTO order_items
           (order_id, product_id, product_name, unit_price, quantity, subtotal,
            seller_id, commerce_mode, fulfilled_by, commission_pct, commission_amount)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         RETURNING id`,
         [
           order.id,
           it.product_id,
@@ -244,10 +272,46 @@ router.post('/', requireAuth, async (req, res, next) => {
           it.commission_amount,
         ]
       );
-      await client.query(
-        `UPDATE products SET stock = GREATEST(0, stock - $1), updated_at = NOW() WHERE id = $2`,
+      const stockRes = await client.query(
+        `UPDATE products
+         SET stock = GREATEST(0, stock - $1),
+             lot_status = CASE
+               WHEN commerce_mode = 'marketplace' AND GREATEST(0, stock - $1) = 0 THEN 'sold'
+               WHEN commerce_mode = 'marketplace' AND lot_status = 'reserved' THEN 'listed'
+               ELSE lot_status
+             END,
+             reserve_expires_at = NULL,
+             updated_at = NOW()
+         WHERE id = $2
+         RETURNING stock, lot_status`,
         [it.quantity, it.product_id]
       );
+
+      await client.query(
+        `UPDATE product_reserves
+         SET status = 'converted', updated_at = NOW()
+         WHERE product_id = $1 AND status = 'active'`,
+        [it.product_id]
+      );
+
+      if (it.commerce_mode === 'marketplace' && it.seller_id) {
+        const net = Number(it.subtotal) - Number(it.commission_amount);
+        await client.query(
+          `INSERT INTO seller_payout_entries
+             (order_item_id, seller_id, gmv, commission, net_amount, status)
+           VALUES ($1,$2,$3,$4,$5,'owed')
+           ON CONFLICT (order_item_id) DO NOTHING`,
+          [
+            oi.rows[0].id,
+            it.seller_id,
+            it.subtotal,
+            it.commission_amount,
+            net,
+          ]
+        );
+      }
+
+      void stockRes;
     }
 
     await client.query('COMMIT');
@@ -335,7 +399,11 @@ router.get('/mine', requireAuth, async (req, res, next) => {
     const orders = await Promise.all(
       r.rows.map(async (o) => {
         const items = await query(
-          'SELECT product_name, quantity, unit_price, subtotal FROM order_items WHERE order_id=$1',
+          `SELECT oi.product_id, oi.product_name, oi.quantity, oi.unit_price, oi.subtotal,
+                  oi.commerce_mode, p.slug AS product_slug
+           FROM order_items oi
+           LEFT JOIN products p ON p.id = oi.product_id
+           WHERE oi.order_id = $1`,
           [o.id]
         );
         return {
@@ -373,7 +441,11 @@ router.get('/lookup/:orderNumber', lookupLimiter, optionalAuth, async (req, res,
     }
 
     const items = await query(
-      'SELECT id, product_name, quantity, unit_price, subtotal FROM order_items WHERE order_id=$1',
+      `SELECT oi.id, oi.product_id, oi.product_name, oi.quantity, oi.unit_price, oi.subtotal,
+              oi.commerce_mode, p.slug AS product_slug
+       FROM order_items oi
+       LEFT JOIN products p ON p.id = oi.product_id
+       WHERE oi.order_id = $1`,
       [order.id]
     );
     res.json({ order: toPublicOrder(order, items.rows) });

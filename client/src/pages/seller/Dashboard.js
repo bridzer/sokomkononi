@@ -10,12 +10,18 @@ import { formatAddressShort } from '../../utils/address';
 export default function SellerDashboard() {
   const { seller } = useAuth();
   const [stats, setStats] = useState(null);
+  const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api
-      .get('/seller/me')
-      .then((r) => setStats(r.data.stats))
+    Promise.all([
+      api.get('/seller/me'),
+      api.get('/market/seller-insights').catch(() => ({ data: null })),
+    ])
+      .then(([me, ins]) => {
+        setStats(me.data.stats);
+        setInsights(ins.data);
+      })
       .catch((err) => toast.error(err.response?.data?.error || 'Failed to load'))
       .finally(() => setLoading(false));
   }, []);
@@ -114,22 +120,46 @@ export default function SellerDashboard() {
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="rounded-2xl border border-brand-100 bg-white p-5 shadow-sm">
-          <h2 className="font-semibold text-slate-900">Grow with sharing</h2>
-          <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
-            On each listing, use Share to post on WhatsApp, Facebook, or copy a direct product link.
-            Buyers land on your product page with your seller profile.
-          </p>
-          <Link to="/seller/listings" className="btn-outline mt-4 text-sm">
-            Open listings
+          <h2 className="font-semibold text-slate-900">Expansion opportunities</h2>
+          {insights?.expansion_score?.length ? (
+            <ul className="mt-2 space-y-1.5 text-sm text-slate-700">
+              {insights.expansion_score.map((row) => (
+                <li key={row.county} className="flex justify-between gap-2">
+                  <span>{row.county}</span>
+                  <span className="text-xs text-slate-500">
+                    demand {row.demand} · you {row.your_supply}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-600 mt-1.5">
+              Not enough demand data yet. Keep listing — signals build from orders and searches.
+            </p>
+          )}
+          <Link to="/seller/payouts" className="btn-outline mt-4 text-sm">
+            View payouts
           </Link>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-amber-50/80 to-white p-5 shadow-sm">
-          <h2 className="font-semibold text-slate-900">Tips for strong listings</h2>
-          <ul className="mt-2 text-sm text-slate-600 space-y-1.5 list-disc pl-5">
-            <li>Clear photos and honest stock build trust.</li>
-            <li>Add a profile photo so buyers recognise your shop.</li>
-            <li>Reply fast on WhatsApp when buyers enquire.</li>
-          </ul>
+          <h2 className="font-semibold text-slate-900">Season & waitlist</h2>
+          {insights?.seasons?.active?.[0] && (
+            <p className="text-sm text-slate-700 mt-1.5">
+              Now: <strong>{insights.seasons.active[0].label}</strong> —{' '}
+              {insights.seasons.active[0].note}
+            </p>
+          )}
+          {insights?.booking_alerts?.length ? (
+            <ul className="mt-2 text-sm text-slate-600 space-y-1">
+              {insights.booking_alerts.slice(0, 3).map((b) => (
+                <li key={b.id}>
+                  Waitlist: {b.quantity}× {b.product_name}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-600 mt-1.5">No pending waitlist bookings.</p>
+          )}
         </div>
       </div>
     </div>

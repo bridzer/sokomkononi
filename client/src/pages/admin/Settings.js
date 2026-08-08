@@ -141,6 +141,61 @@ export default function AdminSettings() {
                 Used when featuring a product without an end date.
               </p>
             </div>
+            <div className="sm:col-span-3 grid gap-3 sm:grid-cols-3 pt-2 border-t border-slate-100">
+              <div className="sm:col-span-2">
+                <label className="label">Corridor counties (comma-separated)</label>
+                <input
+                  className="input"
+                  value={
+                    Array.isArray(settings.corridor_counties)
+                      ? settings.corridor_counties.join(', ')
+                      : settings.corridor_counties || ''
+                  }
+                  onChange={(e) =>
+                    setSettings((s) => ({
+                      ...s,
+                      corridor_counties: e.target.value
+                        .split(',')
+                        .map((x) => x.trim())
+                        .filter(Boolean),
+                    }))
+                  }
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Used for Home “Around the corridor” and Shop corridor filter.
+                </p>
+              </div>
+              <div>
+                <label className="label">Hold hours</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="input"
+                  value={settings.reserve_hold_hours ?? 24}
+                  onChange={(e) =>
+                    setSettings((s) => ({
+                      ...s,
+                      reserve_hold_hours: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="label">Pulse min listings</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="input"
+                  value={settings.market_pulse_min_listings ?? 5}
+                  onChange={(e) =>
+                    setSettings((s) => ({
+                      ...s,
+                      market_pulse_min_listings: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
           </div>
         </section>
 

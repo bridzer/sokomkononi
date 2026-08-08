@@ -197,6 +197,8 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/reserves', require('./routes/reserves'));
+app.use('/api/market', require('./routes/market'));
 app.use('/api/admin', adminRoutes);
 app.use('/api/seller', require('./routes/seller'));
 

@@ -22,8 +22,13 @@ The hybrid model is the right long-term shape for Soko Mkononi. Treating livesto
 | Commerce mode (`marketplace` / `retail`) | **Implemented (MVP)** |
 | Commission snapshot on order lines | **Implemented (MVP)** |
 | Timed featured / premium listings | **Implemented (MVP)** |
-| Seller self-service portal | No |
-| Escrow / seller payouts | No |
+| Seller self-service portal | **MVP** (listings, orders, profile, payouts) |
+| County / corridor proximity discovery | **Implemented** |
+| Soft holds + marketplace lot lifecycle | **Implemented** |
+| Market pulse / comps / seasons signals | **Implemented** |
+| Seller service radius + pickup points | **Implemented** |
+| Manual payout ledger (owed/remitted) | **Implemented** |
+| Escrow | **Deferred** |
 | Auctions | No |
 | Wholesale tiers / subscriptions | No |
 | Owned logistics / warehousing | No |

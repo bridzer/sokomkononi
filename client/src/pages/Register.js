@@ -2,15 +2,21 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { draftToAuthPrefill, loadCheckoutDraft } from '../utils/checkoutDraft';
 
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const prefill =
+    location.state?.prefill ||
+    (location.state?.from === '/checkout/payment' || location.state?.from === '/checkout'
+      ? draftToAuthPrefill(loadCheckoutDraft())
+      : {});
   const [form, setForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
+    name: prefill.name || '',
+    email: prefill.email || '',
+    phone: prefill.phone || '',
     password: '',
     confirm: '',
   });
@@ -39,12 +45,16 @@ export default function Register() {
         phone: form.phone.trim() || undefined,
         password: form.password,
       });
+      const checkoutFlow =
+        redirectTo === '/checkout' ||
+        redirectTo === '/checkout/payment' ||
+        redirectTo === '/checkout/account';
       toast.success(
-        redirectTo === '/checkout'
-          ? 'Account created — continue to checkout'
+        checkoutFlow
+          ? 'Account created — continue to payment'
           : 'Account created — you can track your orders'
       );
-      navigate(redirectTo);
+      navigate(redirectTo === '/checkout' ? '/checkout/payment' : redirectTo);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Could not create account');
     } finally {
@@ -52,17 +62,22 @@ export default function Register() {
     }
   };
 
+  const checkoutFlow =
+    redirectTo === '/checkout' ||
+    redirectTo === '/checkout/payment' ||
+    redirectTo === '/checkout/account';
+
   return (
     <div className="max-w-md mx-auto px-4 py-12">
       <h1 className="text-2xl font-extrabold text-slate-800">Create customer account</h1>
       <p className="mt-1 text-sm text-slate-500">
-        {redirectTo === '/checkout'
+        {checkoutFlow
           ? 'Create an account to place your order and track delivery. '
           : ''}
         Already have an account?{' '}
         <Link
           to="/login"
-          state={{ from: redirectTo }}
+          state={{ from: redirectTo, prefill }}
           className="text-brand-700 font-semibold hover:underline"
         >
           Sign in

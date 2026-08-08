@@ -16,12 +16,14 @@ import { useCart } from '../context/CartContext';
 import WhatsAppButton from '../components/WhatsAppButton';
 import ProductShareButton from '../components/ProductShareButton';
 import BookProductModal from '../components/BookProductModal';
+import HoldProductModal from '../components/HoldProductModal';
 import ProductReviews from '../components/ProductReviews';
 import RelatedProductsRail from '../components/RelatedProductsRail';
 import SellerProfileCard from '../components/SellerProfileCard';
 import SafeImage, { DEFAULT_FALLBACK } from '../components/SafeImage';
 import { buildProductShareText, getProductPageUrl, toAbsoluteUrl } from '../utils/share';
 import { trackViewItem } from '../utils/analytics';
+import { heatLabel, isReadyForPurchase } from '../utils/proximity';
 
 const FALLBACK_IMG = DEFAULT_FALLBACK;
 
@@ -46,6 +48,8 @@ export default function ProductDetail() {
   const [qty, setQty] = useState(1);
   const [activeIdx, setActiveIdx] = useState(0);
   const [bookOpen, setBookOpen] = useState(false);
+  const [holdOpen, setHoldOpen] = useState(false);
+  const [pulse, setPulse] = useState(null);
   const { addItem } = useCart();
   const navigate = useNavigate();
 
@@ -53,12 +57,25 @@ export default function ProductDetail() {
     setLoading(true);
     setActiveIdx(0);
     setQty(1);
+    setPulse(null);
     api
       .get(`/products/${slug}`)
       .then((r) => setProduct(r.data.product))
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  useEffect(() => {
+    if (!product || !isMarketplaceProduct(product)) return;
+    const params = new URLSearchParams();
+    if (product.category_slug) params.set('category', product.category_slug);
+    if (product.breed) params.set('breed', product.breed);
+    if (product.seller?.county) params.set('county', product.seller.county);
+    api
+      .get(`/market/pulse?${params.toString()}`)
+      .then((r) => setPulse(r.data.pulse))
+      .catch(() => setPulse(null));
+  }, [product]);
 
   useEffect(() => {
     if (!product) return undefined;
@@ -132,6 +149,10 @@ export default function ProductDetail() {
   const marketplace = isMarketplaceProduct(product);
   const featured = isEffectivelyFeatured(product);
   const modeMeta = COMMERCE_MODES[marketplace ? 'marketplace' : 'retail'];
+  const ready = isReadyForPurchase(product);
+  const scarce = marketplace && !outOfStock && Number(product.stock) <= 3;
+  const onHold = marketplace && product.lot_status === 'reserved';
+  const pickupLabel = product.seller?.pickup_label;
 
   return (
     <div className="bg-gradient-to-b from-slate-50/80 via-white to-white min-h-full">
@@ -262,6 +283,51 @@ export default function ProductDetail() {
               <span className="text-sm text-slate-500 pb-1">/ {product.unit}</span>
             </div>
 
+            {pulse && !pulse.insufficient && (
+              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                {heatLabel(pulse.heat) && (
+                  <span className="badge bg-amber-50 text-amber-900 ring-1 ring-amber-200">
+                    {heatLabel(pulse.heat)}
+                  </span>
+                )}
+                {pulse.median_price != null && (
+                  <span className="text-slate-500">
+                    Similar lots median KSh {Number(pulse.median_price).toLocaleString()}
+                    {pulse.min_price != null && pulse.max_price != null
+                      ? ` (KSh ${Number(pulse.min_price).toLocaleString()}–${Number(pulse.max_price).toLocaleString()})`
+                      : ''}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {!ready && product.ready_from && (
+              <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
+                Available from {new Date(product.ready_from).toLocaleDateString()} — you can still
+                enquire or hold interest.
+              </div>
+            )}
+            {onHold && (
+              <div className="mt-3 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900">
+                This lot is currently on a soft hold
+                {product.reserve_expires_at
+                  ? ` until ${new Date(product.reserve_expires_at).toLocaleString()}`
+                  : ''}
+                .
+              </div>
+            )}
+            {scarce && ready && (
+              <div className="mt-3 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900 font-semibold">
+                Only {product.stock} left — hold via WhatsApp to avoid missing it.
+              </div>
+            )}
+            {pickupLabel && (
+              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                <span className="font-semibold">Pickup:</span> {pickupLabel}
+                {product.seller?.pickup_notes ? ` — ${product.seller.pickup_notes}` : ''}
+              </div>
+            )}
+
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-brand-50 text-brand-800 border border-brand-100">
                 {fulfillmentLabel(product)}
@@ -301,7 +367,11 @@ export default function ProductDetail() {
               <div className="rounded-xl bg-white border border-slate-100 p-3 shadow-sm">
                 <div className="text-slate-500 text-xs">Availability</div>
                 <div className={`font-semibold ${outOfStock ? 'text-red-600' : 'text-brand-700'}`}>
-                  {outOfStock ? 'Out of stock — book instead' : `In stock (${product.stock})`}
+                  {outOfStock
+                    ? 'Out of stock — book instead'
+                    : scarce
+                      ? `Only ${product.stock} left`
+                      : `In stock (${product.stock})`}
                 </div>
               </div>
               <div className="rounded-xl bg-white border border-slate-100 p-3 shadow-sm">
@@ -370,6 +440,15 @@ export default function ProductDetail() {
                 <button type="button" onClick={buyNow} className="btn-primary w-full py-3 text-base shadow-md">
                   Buy now — secure checkout
                 </button>
+                {marketplace && (
+                  <button
+                    type="button"
+                    onClick={() => setHoldOpen(true)}
+                    className="btn-outline w-full py-2.5 border-amber-300 text-amber-900 hover:bg-amber-50"
+                  >
+                    Hold via WhatsApp
+                  </button>
+                )}
               </div>
             )}
 
@@ -406,6 +485,11 @@ export default function ProductDetail() {
           product={product}
           open={bookOpen}
           onClose={() => setBookOpen(false)}
+        />
+        <HoldProductModal
+          product={product}
+          open={holdOpen}
+          onClose={() => setHoldOpen(false)}
         />
       </div>
     </div>

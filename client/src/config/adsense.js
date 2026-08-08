@@ -33,7 +33,9 @@ const adsenseConfig = {
 /** Routes that must never show ads (checkout, auth, admin, etc.) */
 const AD_EXCLUDED_PATTERNS = [
   /^\/cart$/,
-  /^\/checkout$/,
+  /^\/checkout(?:\/|$)/,
+  /^\/login$/,
+  /^\/register$/,
   /^\/order-success(?:\/|$)/,
   /^\/admin(?:\/|$)/,
 ];
