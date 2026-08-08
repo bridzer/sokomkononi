@@ -25,6 +25,8 @@ export default function MultiImageUpload({
   onChange,
   label = 'Product images',
   max = 10,
+  /** API prefix for uploads — admin or seller portal */
+  uploadBase = '/admin/uploads',
 }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -61,11 +63,11 @@ export default function MultiImageUpload({
       let uploadedUrls = [];
       if (chosen.length === 1) {
         const form = buildSingleImageForm(chosen[0]);
-        const { data } = await api.post('/admin/uploads', form);
+        const { data } = await api.post(uploadBase, form);
         uploadedUrls = [data.url];
       } else {
         const form = buildBatchImageForm(chosen);
-        const { data } = await api.post('/admin/uploads/batch', form);
+        const { data } = await api.post(`${uploadBase}/batch`, form);
         uploadedUrls = (data.files || []).map((f) => f.url).filter(Boolean);
       }
       if (uploadedUrls.length) {

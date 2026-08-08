@@ -7,9 +7,17 @@ import {
   validateImageFile,
 } from '../utils/upload';
 
-export default function ImageUpload({ value, onChange, label = 'Image' }) {
+export default function ImageUpload({
+  value,
+  onChange,
+  label = 'Image',
+  uploadBase = '/admin/uploads',
+  variant = 'rect', // rect | avatar
+  hint = 'JPG, PNG, WEBP or GIF · up to 20 MB. Uploaded to server.',
+}) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const isAvatar = variant === 'avatar';
 
   const pick = () => inputRef.current?.click();
 
@@ -28,7 +36,7 @@ export default function ImageUpload({ value, onChange, label = 'Image' }) {
 
     setUploading(true);
     try {
-      const { data } = await api.post('/admin/uploads', form);
+      const { data } = await api.post(uploadBase, form);
       onChange?.(data.url);
       toast.success('Image uploaded');
     } catch (err) {
@@ -52,11 +60,19 @@ export default function ImageUpload({ value, onChange, label = 'Image' }) {
     <div>
       {label && <label className="label">{label}</label>}
       <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-        <div className="w-full sm:w-28 h-36 sm:h-28 shrink-0 rounded-lg border border-dashed border-slate-300 bg-slate-50 grid place-items-center overflow-hidden mx-auto sm:mx-0">
+        <div
+          className={
+            isAvatar
+              ? 'w-28 h-28 shrink-0 rounded-full border-2 border-dashed border-brand-200 bg-brand-50 grid place-items-center overflow-hidden mx-auto sm:mx-0 ring-4 ring-brand-50'
+              : 'w-full sm:w-28 h-36 sm:h-28 shrink-0 rounded-lg border border-dashed border-slate-300 bg-slate-50 grid place-items-center overflow-hidden mx-auto sm:mx-0'
+          }
+        >
           {value ? (
             <img src={value} alt="preview" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-xs text-slate-400 text-center px-2">No image</span>
+            <span className="text-xs text-slate-400 text-center px-2">
+              {isAvatar ? 'Photo' : 'No image'}
+            </span>
           )}
         </div>
         <div className="flex-1 min-w-0 w-full">
@@ -80,9 +96,7 @@ export default function ImageUpload({ value, onChange, label = 'Image' }) {
               </button>
             )}
           </div>
-          <p className="text-xs text-slate-500 mt-2">
-            JPG, PNG, WEBP or GIF · up to 20 MB. Uploaded to server.
-          </p>
+          <p className="text-xs text-slate-500 mt-2">{hint}</p>
           {value && (
             <p className="text-xs text-slate-400 mt-1 truncate" title={value}>
               {value}

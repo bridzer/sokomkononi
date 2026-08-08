@@ -34,6 +34,14 @@ import AdminBookings from './pages/admin/Bookings';
 import AdminReviews from './pages/admin/Reviews';
 import AdminScripts from './pages/admin/Scripts';
 
+// Seller portal
+import SellerLayout from './components/SellerLayout';
+import SellerLogin from './pages/seller/Login';
+import SellerDashboard from './pages/seller/Dashboard';
+import SellerListings from './pages/seller/Listings';
+import SellerOrders from './pages/seller/Orders';
+import SellerProfile from './pages/seller/Profile';
+
 export default function App() {
   return (
     <Routes>
@@ -74,6 +82,21 @@ export default function App() {
         <Route path="scripts" element={<AdminScripts />} />
         <Route path="messages" element={<AdminMessages />} />
         <Route path="settings" element={<AdminSettings />} />
+      </Route>
+
+      <Route path="/seller/login" element={<SellerLogin />} />
+      <Route
+        path="/seller"
+        element={
+          <ProtectedRoute sellerOnly>
+            <SellerLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<SellerDashboard />} />
+        <Route path="listings" element={<SellerListings />} />
+        <Route path="orders" element={<SellerOrders />} />
+        <Route path="profile" element={<SellerProfile />} />
       </Route>
     </Routes>
   );

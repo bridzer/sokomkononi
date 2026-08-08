@@ -198,6 +198,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/seller', require('./routes/seller'));
 
 // --- Production: serve the built React app from client/build ---
 const CLIENT_BUILD = path.join(__dirname, '..', '..', 'client', 'build');

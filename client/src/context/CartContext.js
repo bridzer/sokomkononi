@@ -4,6 +4,18 @@ import { trackAddToCart, trackRemoveFromCart } from '../utils/analytics';
 
 const CartContext = createContext(null);
 const STORAGE_KEY = 'kalro_cart';
+const PREFS_KEY = 'kalro_checkout_prefs';
+
+function loadPrefs() {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    return raw
+      ? JSON.parse(raw)
+      : { delivery_method: 'soko_delivery', payment_method: 'cod' };
+  } catch {
+    return { delivery_method: 'soko_delivery', payment_method: 'cod' };
+  }
+}
 
 export function CartProvider({ children }) {
   const [items, setItems] = useState(() => {
@@ -14,10 +26,20 @@ export function CartProvider({ children }) {
       return [];
     }
   });
+  const [prefs, setPrefs] = useState(loadPrefs);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items]);
+
+  useEffect(() => {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  }, [prefs]);
+
+  const setDeliveryMethod = (delivery_method) =>
+    setPrefs((p) => ({ ...p, delivery_method }));
+  const setPaymentMethodPref = (payment_method) =>
+    setPrefs((p) => ({ ...p, payment_method }));
 
   const addItem = (product, qty = 1) => {
     setItems((prev) => {
@@ -27,6 +49,10 @@ export function CartProvider({ children }) {
           i.product_id === product.id ? { ...i, quantity: i.quantity + qty } : i
         );
       }
+      const fulfilled_by =
+        product.fulfilled_by === 'seller' && product.seller_id
+          ? 'seller'
+          : 'platform';
       return [
         ...prev,
         {
@@ -38,6 +64,10 @@ export function CartProvider({ children }) {
           image_url: product.image_url,
           unit: product.unit,
           quantity: qty,
+          seller_id: product.seller_id || null,
+          seller_display_name:
+            product.seller_display_name || product.seller?.name || null,
+          fulfilled_by,
         },
       ];
     });
@@ -68,7 +98,19 @@ export function CartProvider({ children }) {
 
   return (
     <CartContext.Provider
-      value={{ items, addItem, updateQty, removeItem, clear, total, count }}
+      value={{
+        items,
+        addItem,
+        updateQty,
+        removeItem,
+        clear,
+        total,
+        count,
+        deliveryMethod: prefs.delivery_method || 'soko_delivery',
+        paymentMethodPref: prefs.payment_method || 'cod',
+        setDeliveryMethod,
+        setPaymentMethodPref,
+      }}
     >
       {children}
     </CartContext.Provider>

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../api/client';
 import { formatKsh, whatsappUrl, normalizeKenyanPhone } from '../../utils/format';
+import AddressDisplay from '../../components/AddressDisplay';
+import { formatAddressShort } from '../../utils/address';
 
 const STATUSES = ['pending', 'confirmed', 'processing', 'delivered', 'cancelled'];
 const statusColor = {
@@ -78,7 +80,9 @@ export default function AdminOrders() {
                       <div className="font-mono text-sm text-brand-700">{o.order_number}</div>
                       <div className="font-semibold text-slate-800 mt-1">{o.customer_name}</div>
                       <div className="text-xs text-slate-500 mt-1">{o.customer_phone}</div>
-                      {o.county && <div className="text-xs text-slate-500">{o.county}</div>}
+                      <div className="text-xs text-slate-500">
+                        <AddressDisplay address={o} compact />
+                      </div>
                     </div>
                     <div className="text-right shrink-0">
                       <div className="font-bold text-brand-700">{formatKsh(o.total_amount)}</div>
@@ -112,7 +116,7 @@ export default function AdminOrders() {
                     <th className="p-3 text-left">Order #</th>
                     <th className="p-3 text-left">Customer</th>
                     <th className="p-3 text-left">Phone</th>
-                    <th className="p-3 text-left">County</th>
+                    <th className="p-3 text-left">Location</th>
                     <th className="p-3 text-right">Total</th>
                     <th className="p-3 text-center">Status</th>
                     <th className="p-3 text-left">Date</th>
@@ -125,7 +129,9 @@ export default function AdminOrders() {
                       <td className="p-3 font-mono text-brand-700">{o.order_number}</td>
                       <td className="p-3 font-medium">{o.customer_name}</td>
                       <td className="p-3">{o.customer_phone}</td>
-                      <td className="p-3">{o.county || '—'}</td>
+                      <td className="p-3 text-xs max-w-[12rem]">
+                        {formatAddressShort(o) || '—'}
+                      </td>
                       <td className="p-3 text-right font-semibold">{formatKsh(o.total_amount)}</td>
                       <td className="p-3 text-center">
                         <span className={`badge ${statusColor[o.status]}`}>{o.status}</span>
@@ -175,8 +181,7 @@ export default function AdminOrders() {
               </div>
               <div className="card p-3">
                 <div className="text-slate-500 text-xs">Delivery</div>
-                <div className="font-medium">{detail.county || 'N/A'}</div>
-                <div className="text-slate-700">{detail.delivery_address}</div>
+                <AddressDisplay address={detail} />
               </div>
             </div>
 
@@ -219,15 +224,31 @@ export default function AdminOrders() {
                       <th className="p-2 text-right">Qty</th>
                       <th className="p-2 text-right">Unit</th>
                       <th className="p-2 text-right">Subtotal</th>
+                      <th className="p-2 text-right">Fee</th>
                     </tr>
                   </thead>
                   <tbody>
                     {detail.items?.map((it) => (
                       <tr key={it.id} className="border-t border-slate-100">
-                        <td className="p-2">{it.product_name}</td>
+                        <td className="p-2">
+                          <div>{it.product_name}</div>
+                          {it.commerce_mode && (
+                            <div className="text-[11px] text-slate-500 capitalize">
+                              {it.commerce_mode}
+                              {Number(it.commission_pct) > 0
+                                ? ` · ${it.commission_pct}% commission`
+                                : ''}
+                            </div>
+                          )}
+                        </td>
                         <td className="p-2 text-right">{it.quantity}</td>
                         <td className="p-2 text-right">{formatKsh(it.unit_price)}</td>
                         <td className="p-2 text-right font-semibold">{formatKsh(it.subtotal)}</td>
+                        <td className="p-2 text-right text-slate-600">
+                          {Number(it.commission_amount) > 0
+                            ? formatKsh(it.commission_amount)
+                            : '—'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -236,6 +257,14 @@ export default function AdminOrders() {
                       <td colSpan="3" className="p-2 text-right font-semibold">Total</td>
                       <td className="p-2 text-right font-bold text-brand-700">
                         {formatKsh(detail.total_amount)}
+                      </td>
+                      <td className="p-2 text-right font-semibold text-slate-700">
+                        {formatKsh(
+                          (detail.items || []).reduce(
+                            (sum, it) => sum + (Number(it.commission_amount) || 0),
+                            0
+                          )
+                        )}
                       </td>
                     </tr>
                   </tfoot>

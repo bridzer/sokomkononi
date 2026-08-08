@@ -79,6 +79,114 @@ export default function AdminSettings() {
         </section>
 
         <section>
+          <h2 className="font-semibold text-slate-800 mb-3">Hybrid marketplace</h2>
+          <p className="text-sm text-slate-500 mb-3">
+            Marketplace listings (livestock, fresh produce) earn a platform commission.
+            Store / retail SKUs (inputs, machinery) use product markup instead.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3 rounded-lg border border-slate-200 p-4">
+            <div>
+              <label className="label">Marketplace commission %</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                className="input"
+                value={settings.marketplace_commission_pct ?? 10}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    marketplace_commission_pct: e.target.value,
+                  }))
+                }
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                Applied to marketplace lines with a seller. Override per seller if needed.
+              </p>
+            </div>
+            <div>
+              <label className="label">Featured listing price (KES)</label>
+              <input
+                type="number"
+                min="0"
+                className="input"
+                value={settings.featured_listing_price_kes ?? 0}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    featured_listing_price_kes: e.target.value,
+                  }))
+                }
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                Reference price for premium placement (seller self-pay later).
+              </p>
+            </div>
+            <div>
+              <label className="label">Default featured days</label>
+              <input
+                type="number"
+                min="1"
+                className="input"
+                value={settings.featured_listing_days ?? 30}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    featured_listing_days: e.target.value,
+                  }))
+                }
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                Used when featuring a product without an end date.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="font-semibold text-slate-800 mb-3">Related products</h2>
+          <p className="text-sm text-slate-500 mb-3">
+            Controls the scrollable “Related products” rail on each product page. Default prefers
+            the closest relationship (same subcategory → category → seller → featured).
+          </p>
+          <div className="rounded-lg border border-slate-200 p-4 space-y-3">
+            <label className="label">Show related products by</label>
+            <select
+              className="input"
+              value={settings.related_products_mode || 'closest'}
+              onChange={(e) =>
+                setSettings((s) => ({ ...s, related_products_mode: e.target.value }))
+              }
+            >
+              {(settings.related_products_modes || [
+                { id: 'closest', label: 'Closest relationship (default)' },
+                { id: 'subcategory', label: 'Same subcategory' },
+                { id: 'category', label: 'Same main category' },
+                { id: 'same_seller', label: 'Same seller' },
+                { id: 'top_selling_category', label: 'Top selling in category' },
+                { id: 'featured', label: 'Featured products' },
+              ]).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+            {(settings.related_products_modes || []).find(
+              (m) => m.id === (settings.related_products_mode || 'closest')
+            )?.description ? (
+              <p className="text-xs text-slate-500">
+                {
+                  settings.related_products_modes.find(
+                    (m) => m.id === (settings.related_products_mode || 'closest')
+                  ).description
+                }
+              </p>
+            ) : null}
+          </div>
+        </section>
+
+        <section>
           <h2 className="font-semibold text-slate-800 mb-3">Business (database)</h2>
           <p className="text-xs text-slate-500 mb-3">
             Storefront contact info primarily uses <code>REACT_APP_*</code> env vars. These fields

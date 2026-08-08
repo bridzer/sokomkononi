@@ -306,6 +306,9 @@ router.post('/products', async (req, res, next) => {
     const {
       category_id, name, description, breed, age_stage, unit,
       stock, image_url, images: imagesInput, is_active, is_featured, seller_id,
+      fulfilled_by: fulfilledByRaw,
+      commerce_mode: commerceModeRaw,
+      featured_until: featuredUntilRaw,
     } = req.body || {};
 
     if (!name) {
@@ -322,6 +325,29 @@ router.post('/products', async (req, res, next) => {
     const { images: imgs, cover } = normalizeImages(imagesInput);
     const finalImages = imgs || (image_url ? [image_url] : []);
     const finalCover = cover || image_url || null;
+    const nextSellerId = seller_id ? Number(seller_id) : null;
+    const fulfilled_by =
+      fulfilledByRaw === 'seller' && nextSellerId
+        ? 'seller'
+        : fulfilledByRaw === 'platform'
+        ? 'platform'
+        : nextSellerId
+        ? 'seller'
+        : 'platform';
+
+    const { resolveCommerceMode, parseFeaturedUntil } = require('../utils/commerceMode');
+    const commerce_mode = await resolveCommerceMode({
+      commerce_mode: commerceModeRaw,
+      category_id,
+    });
+    const settingsRes = await query(
+      'SELECT featured_listing_days FROM settings ORDER BY id ASC LIMIT 1'
+    );
+    const featuredDays = settingsRes.rows[0]?.featured_listing_days;
+    const featured_until = parseFeaturedUntil(featuredUntilRaw, {
+      is_featured: Boolean(is_featured),
+      featured_listing_days: featuredDays,
+    });
 
     const baseSlug = slugify(name);
     const uniqCheck = await query('SELECT COUNT(*)::int AS c FROM products WHERE slug LIKE $1', [
@@ -331,15 +357,19 @@ router.post('/products', async (req, res, next) => {
     const r = await query(
       `INSERT INTO products
         (category_id, name, slug, description, breed, age_stage, unit, price, price_type, price_max,
-         stock, image_url, images, is_active, is_featured, seller_id)
+         stock, image_url, images, is_active, is_featured, featured_until, seller_id, fulfilled_by,
+         commerce_mode)
        VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,'each'),$8,$9,$10,COALESCE($11,0),$12,$13::jsonb,
-               COALESCE($14,TRUE),COALESCE($15,FALSE),$16)
+               COALESCE($14,TRUE),COALESCE($15,FALSE),$16,$17,$18,$19)
        RETURNING *`,
       [
         category_id || null, name, slug, description || null, breed || null, age_stage || null,
         unit, pricing.price, pricing.price_type, pricing.price_max, stock, finalCover,
         JSON.stringify(finalImages), is_active, is_featured,
-        seller_id ? Number(seller_id) : null,
+        featured_until,
+        nextSellerId,
+        fulfilled_by,
+        commerce_mode,
       ]
     );
     res.status(201).json({ product: r.rows[0] });
@@ -353,7 +383,9 @@ router.put('/products/:id', async (req, res, next) => {
     const {
       category_id, name, description, breed, age_stage, unit,
       stock, image_url, images: imagesInput, is_active, is_featured,
-      price_type, seller_id,
+      price_type, seller_id, fulfilled_by: fulfilledByRaw,
+      commerce_mode: commerceModeRaw,
+      featured_until: featuredUntilRaw,
     } = req.body || {};
 
     const hasPricingUpdate =
@@ -378,6 +410,60 @@ router.put('/products/:id', async (req, res, next) => {
     const nextSellerId = hasSellerUpdate
       ? (seller_id ? Number(seller_id) : null)
       : undefined;
+    const hasFulfilledUpdate = Object.prototype.hasOwnProperty.call(
+      req.body || {},
+      'fulfilled_by'
+    );
+    let nextFulfilledBy = null;
+    if (hasFulfilledUpdate) {
+      nextFulfilledBy =
+        fulfilledByRaw === 'seller' ? 'seller' : 'platform';
+    }
+
+    const hasCommerceUpdate = Object.prototype.hasOwnProperty.call(
+      req.body || {},
+      'commerce_mode'
+    );
+    let nextCommerceMode = null;
+    if (hasCommerceUpdate || category_id) {
+      const { resolveCommerceMode } = require('../utils/commerceMode');
+      nextCommerceMode = await resolveCommerceMode({
+        commerce_mode: hasCommerceUpdate ? commerceModeRaw : undefined,
+        category_id: category_id || undefined,
+      });
+    }
+
+    const hasFeaturedFlag = Object.prototype.hasOwnProperty.call(req.body || {}, 'is_featured');
+    const hasFeaturedUntil = Object.prototype.hasOwnProperty.call(
+      req.body || {},
+      'featured_until'
+    );
+    let nextFeaturedUntil = undefined;
+    if (hasFeaturedFlag || hasFeaturedUntil) {
+      const { parseFeaturedUntil } = require('../utils/commerceMode');
+      const settingsRes = await query(
+        'SELECT featured_listing_days FROM settings ORDER BY id ASC LIMIT 1'
+      );
+      const existing = await query(
+        'SELECT is_featured, featured_until FROM products WHERE id=$1',
+        [req.params.id]
+      );
+      const current = existing.rows[0] || {};
+      const featuredOn = hasFeaturedFlag ? Boolean(is_featured) : Boolean(current.is_featured);
+      if (!featuredOn) {
+        nextFeaturedUntil = null;
+      } else if (hasFeaturedUntil) {
+        nextFeaturedUntil = parseFeaturedUntil(featuredUntilRaw, {
+          is_featured: true,
+          featured_listing_days: settingsRes.rows[0]?.featured_listing_days,
+        });
+      } else if (hasFeaturedFlag && is_featured && !current.featured_until) {
+        nextFeaturedUntil = parseFeaturedUntil(null, {
+          is_featured: true,
+          featured_listing_days: settingsRes.rows[0]?.featured_listing_days,
+        });
+      }
+    }
 
     const r = await query(
       `UPDATE products SET
@@ -396,8 +482,15 @@ router.put('/products/:id', async (req, res, next) => {
         is_active = COALESCE($15, is_active),
         is_featured = COALESCE($16, is_featured),
         seller_id = CASE WHEN $18::boolean THEN $17 ELSE seller_id END,
+        fulfilled_by = CASE
+          WHEN $20::boolean THEN $19
+          WHEN $18::boolean AND $17 IS NULL THEN 'platform'
+          ELSE fulfilled_by
+        END,
+        commerce_mode = CASE WHEN $21::boolean THEN $22 ELSE commerce_mode END,
+        featured_until = CASE WHEN $23::boolean THEN $24 ELSE featured_until END,
         updated_at = NOW()
-       WHERE id=$19 RETURNING *`,
+       WHERE id=$25 RETURNING *`,
       [
         category_id, name, description, breed, age_stage, unit,
         pricing?.price ?? null,
@@ -412,6 +505,12 @@ router.put('/products/:id', async (req, res, next) => {
         is_featured,
         nextSellerId ?? null,
         hasSellerUpdate,
+        nextFulfilledBy,
+        hasFulfilledUpdate,
+        hasCommerceUpdate || Boolean(category_id && nextCommerceMode),
+        nextCommerceMode,
+        nextFeaturedUntil !== undefined,
+        nextFeaturedUntil ?? null,
         req.params.id,
       ]
     );
@@ -517,8 +616,11 @@ router.get('/sellers', async (_req, res, next) => {
   try {
     const r = await query(
       `SELECT s.*,
+              u.email AS login_email,
+              u.id AS login_user_id,
               (SELECT COUNT(*)::int FROM products p WHERE p.seller_id = s.id) AS product_count
        FROM sellers s
+       LEFT JOIN users u ON u.id = s.user_id
        ORDER BY s.name ASC`
     );
     res.json({ sellers: r.rows });
@@ -527,22 +629,185 @@ router.get('/sellers', async (_req, res, next) => {
   }
 });
 
+/**
+ * Create or reset a seller login account linked to this seller profile.
+ * Body: { email, password, name? }
+ */
+router.post('/sellers/:id/account', async (req, res, next) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    const { email, password, name } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'email and password are required' });
+    }
+    if (String(password).length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const sellerRes = await query('SELECT * FROM sellers WHERE id=$1', [req.params.id]);
+    if (!sellerRes.rowCount) return res.status(404).json({ error: 'Seller not found' });
+    const seller = sellerRes.rows[0];
+    const loginEmail = String(email).trim().toLowerCase();
+    const { withClient } = require('../db');
+
+    try {
+      await withClient(async (db) => {
+        await db.query('BEGIN');
+        try {
+          let userId = seller.user_id;
+          if (userId) {
+            const hash = await bcrypt.hash(password, 10);
+            await db.query(
+              `UPDATE users SET email=$1, password_hash=$2, name=COALESCE($3, name),
+                 role='seller', phone=COALESCE($4, phone), updated_at=NOW()
+               WHERE id=$5`,
+              [loginEmail, hash, name || seller.name, seller.phone, userId]
+            );
+          } else {
+            const exists = await db.query('SELECT id, role FROM users WHERE email=$1', [
+              loginEmail,
+            ]);
+            if (exists.rowCount) {
+              const existing = exists.rows[0];
+              if (existing.role === 'admin') {
+                throw Object.assign(new Error('That email belongs to an admin account'), {
+                  status: 409,
+                  expose: true,
+                });
+              }
+              const linked = await db.query(
+                'SELECT id FROM sellers WHERE user_id=$1 AND id <> $2',
+                [existing.id, seller.id]
+              );
+              if (linked.rowCount) {
+                throw Object.assign(
+                  new Error('That email is already linked to another seller'),
+                  { status: 409, expose: true }
+                );
+              }
+              const hash = await bcrypt.hash(password, 10);
+              await db.query(
+                `UPDATE users SET password_hash=$1, role='seller', name=COALESCE($2, name),
+                   phone=COALESCE($3, phone), updated_at=NOW() WHERE id=$4`,
+                [hash, name || seller.name, seller.phone, existing.id]
+              );
+              userId = existing.id;
+            } else {
+              const hash = await bcrypt.hash(password, 10);
+              const ins = await db.query(
+                `INSERT INTO users (name, email, phone, password_hash, role)
+                 VALUES ($1,$2,$3,$4,'seller')
+                 RETURNING id`,
+                [name || seller.name, loginEmail, seller.phone, hash]
+              );
+              userId = ins.rows[0].id;
+            }
+            await db.query(
+              'UPDATE sellers SET user_id=$1, email=COALESCE(email,$2), updated_at=NOW() WHERE id=$3',
+              [userId, loginEmail, seller.id]
+            );
+          }
+          await db.query('COMMIT');
+        } catch (err) {
+          await db.query('ROLLBACK');
+          throw err;
+        }
+      });
+
+      const out = await query(
+        `SELECT s.*, u.email AS login_email, u.id AS login_user_id
+         FROM sellers s LEFT JOIN users u ON u.id = s.user_id WHERE s.id=$1`,
+        [seller.id]
+      );
+      res.status(201).json({
+        seller: out.rows[0],
+        message: 'Seller login ready. They can sign in at /seller/login',
+      });
+    } catch (err) {
+      if (err.status) {
+        return res.status(err.status).json({ error: err.message });
+      }
+      if (err.code === '23505') {
+        return res.status(409).json({ error: 'Email already in use' });
+      }
+      throw err;
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Unlink login account from seller (does not delete the user row). */
+router.delete('/sellers/:id/account', async (req, res, next) => {
+  try {
+    const sellerRes = await query('SELECT id, user_id FROM sellers WHERE id=$1', [req.params.id]);
+    if (!sellerRes.rowCount) return res.status(404).json({ error: 'Seller not found' });
+    const { user_id: userId } = sellerRes.rows[0];
+    if (!userId) return res.json({ success: true, message: 'No login linked' });
+
+    await query('UPDATE sellers SET user_id=NULL, updated_at=NOW() WHERE id=$1', [
+      req.params.id,
+    ]);
+    // Demote user so they cannot keep seller JWT access
+    await query(
+      `UPDATE users SET role='customer', updated_at=NOW()
+       WHERE id=$1 AND role='seller'`,
+      [userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/sellers', async (req, res, next) => {
   try {
-    const { name, phone, email, whatsapp, location, bio, is_active } = req.body || {};
+    const {
+      name, phone, email, whatsapp, bio, is_active,
+      is_verified, delivered_count, commission_pct, avatar_url,
+    } = req.body || {};
     if (!name?.trim()) return res.status(400).json({ error: 'Seller name is required' });
+    const { clampCommissionPct } = require('../constants/commerce');
+    const { normalizeSellerAddress } = require('../utils/address');
+    const addr = normalizeSellerAddress(req.body || {}, { required: false });
+    if (!addr.ok) return res.status(400).json({ error: addr.error });
+    const a = addr.fields;
+    const nextCommission =
+      commission_pct === '' || commission_pct === null || commission_pct === undefined
+        ? null
+        : clampCommissionPct(commission_pct);
+    const nextAvatar = avatar_url ? String(avatar_url).trim().slice(0, 1000) : null;
     const r = await query(
-      `INSERT INTO sellers (name, phone, email, whatsapp, location, bio, is_active)
-       VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,TRUE))
+      `INSERT INTO sellers
+        (name, phone, email, whatsapp, location, bio, is_active, is_verified, delivered_count,
+         commission_pct, country_code, country_name, address_line1, address_line2, postal_code,
+         county, sub_county, admin_location, sub_location, latitude, longitude, avatar_url)
+       VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,TRUE),COALESCE($8,FALSE),COALESCE($9,0),$10,
+               $11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
        RETURNING *`,
       [
         name.trim(),
         phone?.trim() || null,
         email?.trim() || null,
         whatsapp?.trim() || null,
-        location?.trim() || null,
+        a.location,
         bio?.trim() || null,
         is_active,
+        Boolean(is_verified),
+        Math.max(0, Number(delivered_count) || 0),
+        nextCommission,
+        a.country_code,
+        a.country_name,
+        a.address_line1,
+        a.address_line2,
+        a.postal_code,
+        a.county,
+        a.sub_county,
+        a.admin_location,
+        a.sub_location,
+        a.latitude,
+        a.longitude,
+        nextAvatar,
       ]
     );
     res.status(201).json({ seller: r.rows[0] });
@@ -553,31 +818,80 @@ router.post('/sellers', async (req, res, next) => {
 
 router.put('/sellers/:id', async (req, res, next) => {
   try {
-    const { name, phone, email, whatsapp, location, bio, is_active } = req.body || {};
+    const {
+      name, phone, email, whatsapp, bio, is_active,
+      is_verified, delivered_count, commission_pct, avatar_url,
+    } = req.body || {};
+    const hasCommission = Object.prototype.hasOwnProperty.call(req.body || {}, 'commission_pct');
+    const hasAvatar = Object.prototype.hasOwnProperty.call(req.body || {}, 'avatar_url');
+    const { clampCommissionPct } = require('../constants/commerce');
+    const { normalizeSellerAddress } = require('../utils/address');
+    const addr = normalizeSellerAddress(req.body || {}, { required: false });
+    if (!addr.ok) return res.status(400).json({ error: addr.error });
+    const a = addr.fields;
+    const nextCommission = hasCommission
+      ? commission_pct === '' || commission_pct === null
+        ? null
+        : clampCommissionPct(commission_pct)
+      : undefined;
+    const nextAvatar = hasAvatar
+      ? (avatar_url ? String(avatar_url).trim().slice(0, 1000) || null : null)
+      : undefined;
     const r = await query(
       `UPDATE sellers SET
          name = COALESCE($1, name),
          phone = COALESCE($2, phone),
          email = COALESCE($3, email),
          whatsapp = COALESCE($4, whatsapp),
-         location = COALESCE($5, location),
+         location = $5,
          bio = COALESCE($6, bio),
          is_active = COALESCE($7, is_active),
+         is_verified = COALESCE($8, is_verified),
+         delivered_count = COALESCE($9, delivered_count),
+         commission_pct = CASE WHEN $11::boolean THEN $10 ELSE commission_pct END,
+         country_code = $12,
+         country_name = $13,
+         address_line1 = $14,
+         address_line2 = $15,
+         postal_code = $16,
+         county = $17,
+         sub_county = $18,
+         admin_location = $19,
+         sub_location = $20,
+         latitude = $21,
+         longitude = $22,
+         avatar_url = CASE WHEN $23::boolean THEN $24 ELSE avatar_url END,
          updated_at = NOW()
-       WHERE id = $8
+       WHERE id = $25
        RETURNING *`,
       [
         name?.trim() || null,
         phone !== undefined ? phone?.trim() || null : null,
         email !== undefined ? email?.trim() || null : null,
         whatsapp !== undefined ? whatsapp?.trim() || null : null,
-        location !== undefined ? location?.trim() || null : null,
+        a.location,
         bio !== undefined ? bio?.trim() || null : null,
         is_active,
+        is_verified === undefined ? null : Boolean(is_verified),
+        delivered_count === undefined ? null : Math.max(0, Number(delivered_count) || 0),
+        nextCommission ?? null,
+        hasCommission,
+        a.country_code,
+        a.country_name,
+        a.address_line1,
+        a.address_line2,
+        a.postal_code,
+        a.county,
+        a.sub_county,
+        a.admin_location,
+        a.sub_location,
+        a.latitude,
+        a.longitude,
+        hasAvatar,
+        nextAvatar ?? null,
         req.params.id,
       ]
     );
-    // Allow clearing nullable fields when explicitly sent as empty string
     if (!r.rowCount) return res.status(404).json({ error: 'Seller not found' });
     res.json({ seller: r.rows[0] });
   } catch (err) {

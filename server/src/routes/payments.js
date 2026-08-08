@@ -36,12 +36,22 @@ function viewTokenFromReq(req) {
 }
 
 /** Public — which payment methods are available at checkout */
-router.get('/options', async (_req, res, next) => {
+router.get('/options', async (_req, res) => {
+  const codOnly = {
+    methods: [
+      {
+        id: 'cod',
+        label: 'Pay on delivery',
+        description: 'Pay when your order is delivered',
+      },
+    ],
+    loopEnabled: false,
+  };
   try {
     const loopEnabled = await isLoopEnabledForCheckout();
     res.json({
       methods: [
-        { id: 'cod', label: 'Pay on delivery', description: 'Pay when your order is delivered' },
+        ...codOnly.methods,
         ...(loopEnabled
           ? [
               {
@@ -55,7 +65,9 @@ router.get('/options', async (_req, res, next) => {
       loopEnabled,
     });
   } catch (err) {
-    next(err);
+    // Don't block checkout UI when the DB/proxy blips
+    console.warn('[payments/options] fallback to COD:', err.code || err.message);
+    res.json(codOnly);
   }
 });
 
@@ -188,7 +200,13 @@ async function handleLoopCallback(req, res) {
     return res.status(400).json({ error: 'Missing reference' });
   }
 
-  const client = await pool.connect();
+  let client;
+  try {
+    client = await pool.connect();
+  } catch (connErr) {
+    console.error('[loop:callback] DB connect failed:', connErr.code || connErr.message);
+    return res.status(503).json({ error: 'Database temporarily unavailable' });
+  }
   try {
     await client.query('BEGIN');
 
@@ -237,11 +255,11 @@ async function handleLoopCallback(req, res) {
     console.log(`[loop:callback] ${reference} -> ${newPaymentStatus}`);
     return res.json({ received: true, status: newPaymentStatus });
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
+    if (client) await client.query('ROLLBACK').catch(() => {});
     console.error('[loop:callback] error:', err.message);
     return res.status(500).json({ error: 'Processing failed' });
   } finally {
-    client.release();
+    if (client) client.release();
   }
 }
 

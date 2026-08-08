@@ -300,7 +300,25 @@ export function cartWhatsAppMessage(items, total, customer) {
     if (customer.name) lines.push(`Name: ${customer.name}`);
     if (customer.phone) lines.push(`Phone: ${customer.phone}`);
     if (customer.delivery_address) lines.push(`Address: ${customer.delivery_address}`);
-    if (customer.county) lines.push(`County: ${customer.county}`);
+    else {
+      if (customer.address_line1) lines.push(`Address: ${customer.address_line1}`);
+      if (customer.address_line2) lines.push(customer.address_line2);
+    }
+    if (customer.county) {
+      const admin = [
+        customer.sub_location,
+        customer.location,
+        customer.sub_county,
+        customer.county,
+      ]
+        .filter(Boolean)
+        .join(', ');
+      lines.push(`Area: ${admin || customer.county}`);
+    }
+    if (customer.postal_code) lines.push(`Postal: ${customer.postal_code}`);
+    if (customer.country_name || customer.country_code) {
+      lines.push(`Country: ${customer.country_name || customer.country_code}`);
+    }
     if (customer.order_number) lines.push(`Order Number: ${customer.order_number}`);
   }
   return lines.join('\n');

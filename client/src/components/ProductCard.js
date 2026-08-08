@@ -7,11 +7,14 @@ import { pickScriptForProduct } from '../utils/whatsappScripts';
 import WhatsAppButton from './WhatsAppButton';
 import BookProductModal from './BookProductModal';
 import SafeImage, { DEFAULT_FALLBACK } from './SafeImage';
+import { isEffectivelyFeatured, isMarketplaceProduct } from '../utils/commerce';
 
 export default function ProductCard({ product }) {
   const { addItem } = useCart();
   const [bookOpen, setBookOpen] = useState(false);
   const outOfStock = Number(product.stock) === 0;
+  const featured = isEffectivelyFeatured(product);
+  const marketplace = isMarketplaceProduct(product);
 
   const actionCell =
     'flex flex-col items-center justify-center gap-px w-full min-w-0 py-1 px-0.5 rounded-md font-semibold text-[9px] leading-tight shadow-sm active:scale-95 transition-transform';
@@ -31,16 +34,23 @@ export default function ProductCard({ product }) {
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        {product.is_featured && (
-          <span className="absolute top-2 left-2 badge bg-accent-500 text-white shadow">
-            ★ Featured
+        <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
+          {featured && (
+            <span className="badge bg-accent-500 text-white shadow">★ Featured</span>
+          )}
+          <span
+            className={`badge shadow ${
+              marketplace ? 'bg-brand-700 text-white' : 'bg-slate-800 text-white'
+            }`}
+          >
+            {marketplace ? 'Marketplace' : 'Store'}
           </span>
-        )}
+        </div>
         {outOfStock ? (
           <span className="absolute top-2 right-2 badge bg-red-500 text-white shadow">
             Out of stock
           </span>
-        ) : product.stock <= 3 ? (
+        ) : marketplace && Number(product.stock) <= 3 ? (
           <span className="absolute top-2 right-2 badge bg-orange-500 text-white shadow">
             Only {product.stock} left
           </span>

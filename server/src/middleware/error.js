@@ -18,6 +18,22 @@ function errorHandler(err, req, res, _next) {
     return res.status(mapped.status).json({ error: mapped.message, code: err.code });
   }
 
+  // Transient DB / proxy disconnects (common with Railway TCP proxy)
+  if (
+    err.code === 'ECONNRESET' ||
+    err.code === 'ECONNREFUSED' ||
+    err.code === 'ETIMEDOUT' ||
+    err.code === '57P01' ||
+    err.code === '08006' ||
+    err.code === '08003'
+  ) {
+    console.error('[API error] DB connection:', err.code, err.message, req.originalUrl);
+    return res.status(503).json({
+      error: 'Database temporarily unavailable. Please try again in a moment.',
+      code: err.code,
+    });
+  }
+
   // PostgreSQL constraint / data errors
   if (err.code === '23514') {
     return res.status(400).json({
@@ -29,6 +45,13 @@ function errorHandler(err, req, res, _next) {
   }
   if (err.code === '23503') {
     return res.status(400).json({ error: 'Referenced record not found' });
+  }
+  // Missing column after a deploy that hasn't migrated yet
+  if (err.code === '42703') {
+    console.error('[API error] Missing DB column — run schema sync / migrate:', err.message);
+    return res.status(500).json({
+      error: 'Database schema is out of date. Restart the server or run db:migrate.',
+    });
   }
 
   console.error('[API error]', {

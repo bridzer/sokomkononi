@@ -11,7 +11,13 @@ import {
 } from '../utils/share';
 import { trackShare } from '../utils/analytics';
 
-export default function ShareProductMenu({ product, className = '', compact = false }) {
+export default function ShareProductMenu({
+  product,
+  className = '',
+  compact = false,
+  /** When true, allow sharing even if listing is hidden (seller hub). */
+  allowInactive = false,
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
 
@@ -31,12 +37,20 @@ export default function ShareProductMenu({ product, className = '', compact = fa
   const pageUrl = getProductPageUrl(product.slug);
   const shareText = buildProductShareText(product);
 
+  const guardActive = () => {
+    if (!product.is_active && !allowInactive) {
+      toast.error('Activate this product before sharing it publicly.');
+      return false;
+    }
+    if (!product.is_active && allowInactive) {
+      toast('Listing is hidden — buyers may not find it until you make it live.');
+    }
+    return true;
+  };
+
   const runNativeShare = async () => {
     setOpen(false);
-    if (!product.is_active) {
-      toast.error('Activate this product before sharing it publicly.');
-      return;
-    }
+    if (!guardActive()) return;
     const result = await shareProduct(product);
     if (result.method === 'native') {
       trackShare('product', product.id, 'native');
@@ -48,10 +62,7 @@ export default function ShareProductMenu({ product, className = '', compact = fa
 
   const copyLink = async () => {
     setOpen(false);
-    if (!product.is_active) {
-      toast.error('Activate this product before sharing it publicly.');
-      return;
-    }
+    if (!guardActive()) return;
     await copyText(pageUrl);
     trackShare('product', product.id, 'copy_link');
     toast.success('Product link copied');
@@ -59,10 +70,7 @@ export default function ShareProductMenu({ product, className = '', compact = fa
 
   const openShareWindow = (url, method) => {
     setOpen(false);
-    if (!product.is_active) {
-      toast.error('Activate this product before sharing it publicly.');
-      return;
-    }
+    if (!guardActive()) return;
     trackShare('product', product.id, method);
     window.open(url, '_blank', 'noopener,noreferrer,width=600,height=520');
   };

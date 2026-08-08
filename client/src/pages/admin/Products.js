@@ -17,6 +17,8 @@ const empty = {
   id: null,
   category_id: '',
   seller_id: '',
+  fulfilled_by: 'platform',
+  commerce_mode: 'retail',
   name: '',
   description: '',
   breed: '',
@@ -30,6 +32,7 @@ const empty = {
   images: [],
   is_active: true,
   is_featured: false,
+  featured_until: '',
 };
 
 // Reconcile the `images` array with the legacy `image_url` field so the form
@@ -76,6 +79,11 @@ export default function AdminProducts() {
       ...p,
       category_id: p.category_id || '',
       seller_id: p.seller_id || '',
+      fulfilled_by: p.fulfilled_by === 'seller' ? 'seller' : 'platform',
+      commerce_mode: p.commerce_mode === 'marketplace' ? 'marketplace' : 'retail',
+      featured_until: p.featured_until
+        ? String(p.featured_until).slice(0, 10)
+        : '',
       images: coerceImages(p),
       ...pricingFromProduct(p),
     });
@@ -103,6 +111,14 @@ export default function AdminProducts() {
         stock: Number(editing.stock) || 0,
         category_id: editing.category_id ? Number(editing.category_id) : null,
         seller_id: editing.seller_id ? Number(editing.seller_id) : null,
+        commerce_mode:
+          editing.commerce_mode === 'marketplace' ? 'marketplace' : 'retail',
+        featured_until:
+          editing.is_featured && editing.featured_until
+            ? editing.featured_until
+            : editing.is_featured
+            ? null
+            : null,
         images,
         image_url: images[0] || null,
       };
@@ -209,6 +225,15 @@ export default function AdminProducts() {
                       {p.is_featured && (
                         <span className="badge bg-accent-500 text-white">Featured</span>
                       )}
+                      <span
+                        className={`badge ${
+                          p.commerce_mode === 'marketplace'
+                            ? 'bg-brand-100 text-brand-800'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {p.commerce_mode === 'marketplace' ? 'Marketplace' : 'Store'}
+                      </span>
                     </div>
                     <div className="mt-3 flex gap-2">
                       <button
@@ -291,6 +316,15 @@ export default function AdminProducts() {
                       {p.is_featured && (
                         <span className="badge bg-accent-500 text-white ml-1">Featured</span>
                       )}
+                      <span
+                        className={`badge ml-1 ${
+                          p.commerce_mode === 'marketplace'
+                            ? 'bg-brand-100 text-brand-800'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {p.commerce_mode === 'marketplace' ? 'Marketplace' : 'Store'}
+                      </span>
                     </td>
                     <td className="p-3 text-right whitespace-nowrap">
                       <button className="text-brand-700 hover:underline mr-3" onClick={() => openEdit(p)}>
@@ -372,7 +406,16 @@ export default function AdminProducts() {
                 <select
                   className="input"
                   value={editing.seller_id || ''}
-                  onChange={(e) => setEditing({ ...editing, seller_id: e.target.value })}
+                  onChange={(e) => {
+                    const seller_id = e.target.value;
+                    setEditing({
+                      ...editing,
+                      seller_id,
+                      fulfilled_by: seller_id
+                        ? editing.fulfilled_by || 'seller'
+                        : 'platform',
+                    });
+                  }}
                 >
                   <option value="">Soko Mkononi (default)</option>
                   {sellers.map((s) => (
@@ -382,6 +425,40 @@ export default function AdminProducts() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="label">Fulfilled by</label>
+                <select
+                  className="input"
+                  value={editing.fulfilled_by || 'platform'}
+                  onChange={(e) => setEditing({ ...editing, fulfilled_by: e.target.value })}
+                >
+                  <option value="platform">Soko Mkononi (insured delivery)</option>
+                  <option value="seller" disabled={!editing.seller_id}>
+                    Seller (assurance optional)
+                  </option>
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Controls cart/checkout shipping notices and who arranges delivery.
+                </p>
+              </div>
+              <div>
+                <label className="label">Commerce mode</label>
+                <select
+                  className="input"
+                  value={editing.commerce_mode || 'retail'}
+                  onChange={(e) =>
+                    setEditing({ ...editing, commerce_mode: e.target.value })
+                  }
+                >
+                  <option value="marketplace">
+                    Marketplace — limited supply (commission)
+                  </option>
+                  <option value="retail">Store — constant supply (retail)</option>
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Marketplace = livestock / fresh lots. Store = fertilizers, seeds, tools.
+                </p>
               </div>
               <div>
                 <label className="label">Breed</label>
@@ -457,8 +534,24 @@ export default function AdminProducts() {
                   checked={!!editing.is_featured}
                   onChange={(e) => setEditing({ ...editing, is_featured: e.target.checked })}
                 />
-                Featured on home page
+                Featured (premium placement)
               </label>
+              {editing.is_featured && (
+                <div>
+                  <label className="label">Featured until (optional)</label>
+                  <input
+                    type="date"
+                    className="input"
+                    value={editing.featured_until || ''}
+                    onChange={(e) =>
+                      setEditing({ ...editing, featured_until: e.target.value })
+                    }
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Leave blank to use the default featured period from Settings.
+                  </p>
+                </div>
+              )}
             </div>
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2 border-t border-slate-100 sm:border-0">
               <button type="button" className="btn-ghost w-full sm:w-auto py-2.5" onClick={close}>

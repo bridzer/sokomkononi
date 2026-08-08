@@ -26,7 +26,8 @@ router.post('/register', async (req, res, next) => {
     );
     const user = insert.rows[0];
     const token = signToken(user);
-    res.status(201).json({ user, token });
+    const profile = await withSellerProfile(user);
+    res.status(201).json({ ...profile, token });
   } catch (err) {
     next(err);
   }
@@ -45,8 +46,22 @@ router.post('/login', async (req, res, next) => {
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
     delete user.password_hash;
+
+    if (user.role === 'seller') {
+      const active = await query(
+        'SELECT id FROM sellers WHERE user_id=$1 AND is_active=TRUE',
+        [user.id]
+      );
+      if (!active.rowCount) {
+        return res.status(403).json({
+          error: 'Seller account is inactive or not linked. Contact Soko Mkononi.',
+        });
+      }
+    }
+
     const token = signToken(user);
-    res.json({ user, token });
+    const profile = await withSellerProfile(user);
+    res.json({ ...profile, token });
   } catch (err) {
     next(err);
   }
@@ -59,10 +74,33 @@ router.get('/me', requireAuth, async (req, res, next) => {
       [req.user.id]
     );
     if (!result.rowCount) return res.status(404).json({ error: 'User not found' });
-    res.json({ user: result.rows[0] });
+    const user = result.rows[0];
+    let seller = null;
+    if (user.role === 'seller') {
+      const s = await query(
+        `SELECT id, name, phone, email, whatsapp, location, bio, is_active, is_verified,
+                delivered_count, commission_pct, user_id
+         FROM sellers WHERE user_id = $1`,
+        [user.id]
+      );
+      seller = s.rows[0] || null;
+    }
+    res.json({ user, seller });
   } catch (err) {
     next(err);
   }
 });
+
+/** Enrich login/register responses with seller profile when applicable */
+async function withSellerProfile(user) {
+  if (!user || user.role !== 'seller') return { user, seller: null };
+  const s = await query(
+    `SELECT id, name, phone, email, whatsapp, location, bio, is_active, is_verified,
+            delivered_count, commission_pct, user_id
+     FROM sellers WHERE user_id = $1`,
+    [user.id]
+  );
+  return { user, seller: s.rows[0] || null };
+}
 
 module.exports = router;

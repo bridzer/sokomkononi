@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const { login, user, isAdmin } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [form, setForm] = useState({ email: '', password: '' });
@@ -15,11 +15,13 @@ export default function Login() {
       ? location.state.from
       : location.state?.from?.pathname || '/account';
 
-  // Already logged in as customer
+  // Already logged in — send each role to the right hub
   React.useEffect(() => {
-    if (user && !isAdmin) navigate(redirectTo, { replace: true });
-    if (user && isAdmin) navigate('/admin', { replace: true });
-  }, [user, isAdmin, navigate, redirectTo]);
+    if (!user) return;
+    if (user.role === 'admin') navigate('/admin', { replace: true });
+    else if (user.role === 'seller') navigate('/seller', { replace: true });
+    else navigate(redirectTo, { replace: true });
+  }, [user, navigate, redirectTo]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -28,6 +30,7 @@ export default function Login() {
       const loggedIn = await login(form.email, form.password);
       toast.success(`Welcome back, ${loggedIn.name}`);
       if (loggedIn.role === 'admin') navigate('/admin');
+      else if (loggedIn.role === 'seller') navigate('/seller');
       else navigate(redirectTo);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Login failed');

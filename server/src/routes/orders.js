@@ -13,6 +13,7 @@ const {
   toPublicOrder,
   canAccessOrder,
 } = require('../utils/orderAccess');
+const { normalizeOrderAddress } = require('../utils/address');
 
 const router = express.Router();
 
@@ -26,27 +27,48 @@ const lookupLimiter = rateLimit({
 
 // Place order — must be logged in; order is always assigned to the current user
 router.post('/', requireAuth, async (req, res, next) => {
-  const client = await pool.connect();
+  let client;
   try {
+    try {
+      client = await pool.connect();
+    } catch (connErr) {
+      console.error('[orders] DB connect failed:', connErr.code || connErr.message);
+      return res.status(503).json({
+        error: 'Database temporarily unavailable. Please try again in a moment.',
+      });
+    }
+
     const {
       customer_name,
       customer_phone,
       customer_email,
-      delivery_address,
-      county,
       notes,
       items,
       payment_method: paymentMethodRaw,
+      delivery_method: deliveryMethodRaw,
     } = req.body || {};
 
     const payment_method = paymentMethodRaw === 'loop' ? 'loop' : 'cod';
+    const delivery_method = ['soko_delivery', 'pickup', 'own_transport'].includes(
+      deliveryMethodRaw
+    )
+      ? deliveryMethodRaw
+      : 'soko_delivery';
     const user_id = req.user.id;
 
-    if (!customer_name || !customer_phone || !delivery_address) {
+    if (!customer_name || !customer_phone) {
       return res
         .status(400)
-        .json({ error: 'customer_name, customer_phone and delivery_address are required' });
+        .json({ error: 'customer_name and customer_phone are required' });
     }
+
+    const addressNorm = normalizeOrderAddress(req.body || {}, {
+      required: delivery_method === 'soko_delivery',
+    });
+    if (!addressNorm.ok) {
+      return res.status(400).json({ error: addressNorm.error });
+    }
+    const addr = addressNorm.fields;
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'items must be a non-empty array' });
     }
@@ -71,10 +93,28 @@ router.post('/', requireAuth, async (req, res, next) => {
     const viewToken = genViewToken();
     const productIds = items.map((i) => Number(i.product_id));
     const productsRes = await client.query(
-      `SELECT id, name, price, price_type, price_max, stock, is_active FROM products WHERE id = ANY($1::int[])`,
+      `SELECT p.id, p.name, p.price, p.price_type, p.price_max, p.stock, p.is_active,
+              p.seller_id, p.fulfilled_by, p.commerce_mode,
+              s.commission_pct AS seller_commission_pct
+       FROM products p
+       LEFT JOIN sellers s ON s.id = p.seller_id
+       WHERE p.id = ANY($1::int[])`,
       [productIds]
     );
     const productMap = new Map(productsRes.rows.map((p) => [p.id, p]));
+    const settingsRes = await client.query(
+      'SELECT marketplace_commission_pct FROM settings ORDER BY id ASC LIMIT 1'
+    );
+    const {
+      clampCommissionPct,
+      computeCommissionAmount,
+      normalizeCommerceMode,
+      DEFAULT_MARKETPLACE_COMMISSION_PCT,
+    } = require('../constants/commerce');
+    const defaultCommission = clampCommissionPct(
+      settingsRes.rows[0]?.marketplace_commission_pct,
+      DEFAULT_MARKETPLACE_COMMISSION_PCT
+    );
 
     let total = 0;
     const insertItems = [];
@@ -105,6 +145,17 @@ router.post('/', requireAuth, async (req, res, next) => {
       }
       const unit = Number(p.price);
       const subtotal = unit * qty;
+      const commerce_mode = normalizeCommerceMode(p.commerce_mode);
+      const commission_pct =
+        commerce_mode === 'marketplace' && p.seller_id
+          ? clampCommissionPct(
+              p.seller_commission_pct != null
+                ? p.seller_commission_pct
+                : defaultCommission,
+              defaultCommission
+            )
+          : 0;
+      const commission_amount = computeCommissionAmount(subtotal, commission_pct);
       const rangeNote =
         p.price_type === 'range' && p.price_max != null
           ? ` [price range KSh ${unit}-KSh ${Number(p.price_max)}]`
@@ -116,15 +167,31 @@ router.post('/', requireAuth, async (req, res, next) => {
         unit_price: unit,
         quantity: qty,
         subtotal,
+        seller_id: p.seller_id || null,
+        commerce_mode,
+        fulfilled_by: p.fulfilled_by === 'seller' ? 'seller' : 'platform',
+        commission_pct,
+        commission_amount,
       });
     }
+
+    const addressValue =
+      addr.delivery_address ||
+      (delivery_method === 'pickup'
+        ? 'Customer pickup'
+        : delivery_method === 'own_transport'
+        ? 'Customer arranging own transport'
+        : '');
 
     const orderRes = await client.query(
       `INSERT INTO orders
         (order_number, view_token, user_id, customer_name, customer_phone, customer_email,
          delivery_address, county, notes, total_amount, status, payment_method, payment_status,
-         delivery_min_days, delivery_max_days)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+         delivery_min_days, delivery_max_days, delivery_method,
+         country_code, country_name, address_line1, address_line2, postal_code,
+         sub_county, location, sub_location, latitude, longitude)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
+               $17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
        RETURNING *`,
       [
         orderNumber,
@@ -133,8 +200,8 @@ router.post('/', requireAuth, async (req, res, next) => {
         customer_name,
         customer_phone,
         customer_email || null,
-        delivery_address,
-        county || null,
+        addressValue,
+        addr.county || null,
         notes || null,
         total,
         initialOrderStatus,
@@ -142,15 +209,40 @@ router.post('/', requireAuth, async (req, res, next) => {
         initialPaymentStatus,
         DELIVERY_MIN_DAYS,
         DELIVERY_MAX_DAYS,
+        delivery_method,
+        addr.country_code,
+        addr.country_name,
+        addr.address_line1,
+        addr.address_line2,
+        addr.postal_code,
+        addr.sub_county,
+        addr.location,
+        addr.sub_location,
+        addr.latitude,
+        addr.longitude,
       ]
     );
     const order = orderRes.rows[0];
 
     for (const it of insertItems) {
       await client.query(
-        `INSERT INTO order_items (order_id, product_id, product_name, unit_price, quantity, subtotal)
-         VALUES ($1,$2,$3,$4,$5,$6)`,
-        [order.id, it.product_id, it.product_name, it.unit_price, it.quantity, it.subtotal]
+        `INSERT INTO order_items
+          (order_id, product_id, product_name, unit_price, quantity, subtotal,
+           seller_id, commerce_mode, fulfilled_by, commission_pct, commission_amount)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        [
+          order.id,
+          it.product_id,
+          it.product_name,
+          it.unit_price,
+          it.quantity,
+          it.subtotal,
+          it.seller_id,
+          it.commerce_mode,
+          it.fulfilled_by,
+          it.commission_pct,
+          it.commission_amount,
+        ]
       );
       await client.query(
         `UPDATE products SET stock = GREATEST(0, stock - $1), updated_at = NOW() WHERE id = $2`,
@@ -213,10 +305,17 @@ router.post('/', requireAuth, async (req, res, next) => {
           : null,
     });
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
+    if (client) await client.query('ROLLBACK').catch(() => {});
+    // Connection drops mid-request should not take down the whole process
+    if (err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED' || err.code === '57P01') {
+      console.error('[orders] DB connection lost:', err.code || err.message);
+      return res.status(503).json({
+        error: 'Database temporarily unavailable. Please try again in a moment.',
+      });
+    }
     next(err);
   } finally {
-    client.release();
+    if (client) client.release();
   }
 });
 
@@ -261,7 +360,7 @@ router.get('/lookup/:orderNumber', lookupLimiter, optionalAuth, async (req, res,
     const o = await query(
       `SELECT id, order_number, view_token, user_id, customer_name, customer_phone,
               delivery_address, county, total_amount, status, payment_method, payment_status,
-              delivery_min_days, delivery_max_days
+              delivery_method, delivery_min_days, delivery_max_days
        FROM orders WHERE order_number=$1`,
       [req.params.orderNumber]
     );

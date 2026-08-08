@@ -6,6 +6,7 @@ import WhatsAppButton from '../components/WhatsAppButton';
 import PhoneButton from '../components/PhoneButton';
 import { deliveryLabel } from '../utils/delivery';
 import { useAuth } from '../context/AuthContext';
+import AddressDisplay from '../components/AddressDisplay';
 
 const PAYMENT_LABELS = {
   cod: 'Pay on delivery',
@@ -82,7 +83,15 @@ export default function OrderSuccess() {
     name: order.customer_name,
     phone: order.customer_phone,
     delivery_address: order.delivery_address,
+    address_line1: order.address_line1,
+    address_line2: order.address_line2,
     county: order.county,
+    sub_county: order.sub_county,
+    location: order.location,
+    sub_location: order.sub_location,
+    postal_code: order.postal_code,
+    country_code: order.country_code,
+    country_name: order.country_name,
     order_number: order.order_number,
   });
 
@@ -173,7 +182,15 @@ export default function OrderSuccess() {
                 {order.delivery_label || deliveryLabel()}
               </span>
             </p>
-            <p className="text-xs text-slate-500 capitalize">
+            {(order.address_line1 || order.delivery_address || order.county) && (
+              <div className="pt-3 border-t border-slate-100 mt-3">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
+                  Delivery address
+                </div>
+                <AddressDisplay address={order} />
+              </div>
+            )}
+            <p className="text-xs text-slate-500 capitalize pt-2">
               Status: {order.status}
             </p>
           </div>

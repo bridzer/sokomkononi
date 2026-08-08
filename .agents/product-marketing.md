@@ -1,14 +1,14 @@
 # Product Marketing Context
 
-**Document version:** v1
-**Last updated:** 2026-07-27
+**Document version:** v2
+**Last updated:** 2026-08-08
 
 ## Product Overview
 **One-liner:** Soko Mkononi is Kenya’s agricultural marketplace — the market in your hand — connecting farmers with buyers of livestock, crops, machinery, and farm inputs.
 **What it does:** Farmers and agri-sellers list farm goods; buyers browse by category, order online or via WhatsApp, and get delivery across Kenya’s 47 counties. Multi-seller catalog with cart, checkout, and direct chat.
 **Product category:** Agricultural marketplace / agri-commerce (how customers search: “buy dairy goats Kenya”, “farm machinery marketplace”, “livestock for sale Kenya”)
 **Product type:** Multi-seller e-commerce marketplace (B2B + B2C agri)
-**Business model:** Product sales and seller listings; WhatsApp-assisted conversion; pay on delivery and mobile payments
+**Business model:** Hybrid agri commerce — (1) **marketplace** for limited-supply goods (livestock, fresh produce) with commission + premium listings; (2) **retail store** for constant-supply inputs/machinery with markup. WhatsApp-assisted conversion; COD + Loop payments.
 
 ## Target Audience
 **Target companies:** Smallholder and commercial farmers, agri-dealers, cooperatives, households buying livestock/produce, agribusinesses sourcing inputs
@@ -105,7 +105,15 @@
 ## Goals
 **Business goal:** Become Kenya’s go-to agricultural marketplace connecting farmers and buyers
 **Conversion action:** Browse → WhatsApp/order (primary); complete checkout (secondary)
-**Current metrics:** Early / rebrand stage from Kalro Farm Kenya single-farm storefront
+**Current metrics:** Early hybrid build — multi-seller catalog, commerce modes, commission snapshots, timed featured listings; seller self-service / escrow / auctions still ahead
+
+## Hybrid model phases (Soko Mkononi)
+1. **Now** — Encode marketplace vs retail on products; commission on marketplace seller lines; timed featured listings; one checkout
+2. **Next** — Seller login + listing self-service; cost/markup fields for retail SKUs; payout ledger (manual then automated)
+3. **Trust** — Escrow / release-on-delivery; stronger verification for livestock lots
+4. **Logistics** — Warehousing for retail SKUs; coordinated farm pickup for marketplace lots
+5. **Finance** — Input credit, insurance referrals, analytics for B2B buyers
+6. **Trade** — Export lanes and cross-border buyers (only after domestic liquidity)
 
 ## Programmatic SEO (priority playbooks)
 1. **Directory / category hubs** — `/shop/{category}` for livestock, horticulture, machinery, inputs
@@ -122,4 +130,5 @@
 
 ## Changelog
 *Newest first. One line per revision: what changed and why.*
+- v2 (2026-08-08) — Adopted hybrid marketplace + retail model; added phased scale plan and current-status metrics.
 - v1 (2026-07-27) — Initial context for Soko Mkononi rebrand from Kalro Farm Kenya into an agricultural marketplace connecting farmers.

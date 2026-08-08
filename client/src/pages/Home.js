@@ -23,7 +23,7 @@ export default function Home() {
               'linear-gradient(105deg, rgba(16,48,24,0.88) 0%, rgba(20,60,30,0.65) 45%, rgba(0,0,0,0.35) 100%), url(https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=1800&q=80)',
           }}
         />
-        <div className="relative max-w-7xl mx-auto px-4 py-14 sm:py-20 md:py-28 text-white w-full">
+        <div className="relative max-w-7xl mx-auto px-4 py-5 sm:py-20 md:py-28 text-white w-full">
           <div className="max-w-2xl">
             <p className="font-display text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight text-white leading-[1.05]">
               Soko Mkononi

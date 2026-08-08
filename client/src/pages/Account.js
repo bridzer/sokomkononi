@@ -4,6 +4,7 @@ import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { formatKsh } from '../utils/format';
 import { deliveryLabel } from '../utils/delivery';
+import { formatAddressShort } from '../utils/address';
 
 const STATUS_STEPS = ['pending', 'confirmed', 'processing', 'delivered'];
 
@@ -133,7 +134,7 @@ export default function Account() {
 
               <p className="mt-3 text-xs text-slate-500">
                 Est. delivery: {o.delivery_label || deliveryLabel()}
-                {o.county ? ` · ${o.county}` : ''}
+                {formatAddressShort(o) ? ` · ${formatAddressShort(o)}` : ''}
               </p>
             </li>
           ))}

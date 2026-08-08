@@ -52,6 +52,34 @@ function requireAdmin(req, res, next) {
   });
 }
 
+/**
+ * Authenticated seller with an active linked sellers profile.
+ * Sets req.seller from the database.
+ */
+function requireSeller(req, res, next) {
+  requireAuth(req, res, async () => {
+    try {
+      if (req.user.role !== 'seller') {
+        return res.status(403).json({ error: 'Seller access required' });
+      }
+      const { query } = require('../db');
+      const r = await query(
+        `SELECT * FROM sellers WHERE user_id = $1 AND is_active = TRUE`,
+        [req.user.id]
+      );
+      if (!r.rowCount) {
+        return res.status(403).json({
+          error: 'Seller profile not found or inactive. Contact Soko Mkononi support.',
+        });
+      }
+      req.seller = r.rows[0];
+      next();
+    } catch (err) {
+      next(err);
+    }
+  });
+}
+
 /** Attach req.user when a valid token is present; never fail the request. */
 function optionalAuth(req, _res, next) {
   const header = req.headers.authorization || '';
@@ -73,4 +101,11 @@ function signToken(user) {
   );
 }
 
-module.exports = { requireAuth, requireAdmin, optionalAuth, signToken, resolveJwtSecret };
+module.exports = {
+  requireAuth,
+  requireAdmin,
+  requireSeller,
+  optionalAuth,
+  signToken,
+  resolveJwtSecret,
+};

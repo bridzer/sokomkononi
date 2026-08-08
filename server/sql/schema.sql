@@ -3,7 +3,7 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Users (customers + admins)
+-- Users (customers + admins + sellers)
 CREATE TABLE IF NOT EXISTS users (
   id            SERIAL PRIMARY KEY,
   name          VARCHAR(120) NOT NULL,
@@ -11,10 +11,15 @@ CREATE TABLE IF NOT EXISTS users (
   phone         VARCHAR(32),
   password_hash VARCHAR(255) NOT NULL,
   role          VARCHAR(20) NOT NULL DEFAULT 'customer'
-                CHECK (role IN ('customer','admin')),
+                CHECK (role IN ('customer','admin','seller')),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Existing DBs may still have the old 2-role check — widen it
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check
+  CHECK (role IN ('customer','admin','seller'));
 
 -- Categories: Dairy Goats, Boer Goats, Poultry, Eggs, etc.
 CREATE TABLE IF NOT EXISTS categories (
@@ -237,3 +242,122 @@ CREATE TABLE IF NOT EXISTS product_reviews (
 
 CREATE INDEX IF NOT EXISTS idx_product_reviews_product ON product_reviews(product_id);
 CREATE INDEX IF NOT EXISTS idx_product_reviews_approved ON product_reviews(product_id, is_approved);
+
+-- Related products strategy (admin-configurable; default = closest relationship)
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS related_products_mode VARCHAR(40) NOT NULL DEFAULT 'closest';
+
+-- Seller trust signals (Alibaba-style supplier profile)
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS delivered_count INT NOT NULL DEFAULT 0;
+
+-- Who fulfills / ships the product: Soko Mkononi (platform) or the listing seller
+ALTER TABLE products ADD COLUMN IF NOT EXISTS fulfilled_by VARCHAR(24) NOT NULL DEFAULT 'platform';
+
+-- Checkout delivery preference
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_method VARCHAR(32) NOT NULL DEFAULT 'soko_delivery';
+
+-- ---------------------------------------------------------------------------
+-- Hybrid commerce model
+--   marketplace = limited supply (livestock, fresh produce) → commission
+--   retail      = constant supply (inputs, machinery) → store / markup
+-- ---------------------------------------------------------------------------
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS default_commerce_mode VARCHAR(20) NOT NULL DEFAULT 'retail';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS commerce_mode VARCHAR(20) NOT NULL DEFAULT 'retail';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS featured_until TIMESTAMPTZ;
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS commission_pct NUMERIC(5,2);
+
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS marketplace_commission_pct NUMERIC(5,2) NOT NULL DEFAULT 10;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS featured_listing_price_kes NUMERIC(12,2) NOT NULL DEFAULT 0;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS featured_listing_days INT NOT NULL DEFAULT 30;
+
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS seller_id INT REFERENCES sellers(id) ON DELETE SET NULL;
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS commerce_mode VARCHAR(20);
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS fulfilled_by VARCHAR(24);
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS commission_pct NUMERIC(5,2) NOT NULL DEFAULT 0;
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS commission_amount NUMERIC(12,2) NOT NULL DEFAULT 0;
+
+DO $$ BEGIN
+  ALTER TABLE categories ADD CONSTRAINT categories_default_commerce_mode_check
+    CHECK (default_commerce_mode IN ('marketplace', 'retail'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE products ADD CONSTRAINT products_commerce_mode_check
+    CHECK (commerce_mode IN ('marketplace', 'retail'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Seed category defaults from taxonomy slugs (idempotent)
+UPDATE categories SET default_commerce_mode = 'marketplace', updated_at = NOW()
+WHERE parent_id IS NULL
+  AND slug IN (
+    'livestock', 'horticulture', 'crop-production',
+    'fisheries-aquaculture', 'forestry'
+  );
+
+UPDATE categories SET default_commerce_mode = 'retail', updated_at = NOW()
+WHERE parent_id IS NULL
+  AND slug IN (
+    'agricultural-engineering', 'soil-science-inputs', 'agribusiness',
+    'food-science-technology', 'biotechnology-genetics'
+  );
+
+-- Children inherit parent's default
+UPDATE categories child
+SET default_commerce_mode = parent.default_commerce_mode,
+    updated_at = NOW()
+FROM categories parent
+WHERE child.parent_id = parent.id
+  AND parent.default_commerce_mode IS NOT NULL;
+
+-- Promote stock that sits under marketplace categories (livestock, produce, etc.)
+UPDATE products p
+SET commerce_mode = 'marketplace',
+    updated_at = NOW()
+FROM categories c
+LEFT JOIN categories pc ON pc.id = c.parent_id
+WHERE p.category_id = c.id
+  AND p.commerce_mode = 'retail'
+  AND COALESCE(pc.default_commerce_mode, c.default_commerce_mode) = 'marketplace';
+
+CREATE INDEX IF NOT EXISTS idx_products_commerce_mode ON products(commerce_mode);
+CREATE INDEX IF NOT EXISTS idx_products_featured_until ON products(featured_until)
+  WHERE is_featured = TRUE;
+
+-- Seller login: link a sellers row to a users account (role = seller)
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS user_id INT UNIQUE REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_sellers_user ON sellers(user_id);
+
+-- Structured delivery address (for routing / distance). delivery_address kept as composed string.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS country_code VARCHAR(8);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS country_name VARCHAR(120);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS address_line1 VARCHAR(240);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS address_line2 VARCHAR(240);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS postal_code VARCHAR(32);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS sub_county VARCHAR(120);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS location VARCHAR(120);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS sub_location VARCHAR(120);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7);
+CREATE INDEX IF NOT EXISTS idx_orders_county ON orders(county);
+CREATE INDEX IF NOT EXISTS idx_orders_country ON orders(country_code);
+
+-- Structured seller base location (sellers.location stays the composed display string).
+-- admin_location = Kenya LOCATION unit (avoids clash with legacy location column).
+ALTER TABLE sellers ALTER COLUMN location TYPE VARCHAR(500);
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS country_code VARCHAR(8);
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS country_name VARCHAR(120);
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS address_line1 VARCHAR(240);
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS address_line2 VARCHAR(240);
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS postal_code VARCHAR(32);
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS county VARCHAR(120);
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS sub_county VARCHAR(120);
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS admin_location VARCHAR(120);
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS sub_location VARCHAR(120);
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7);
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7);
+CREATE INDEX IF NOT EXISTS idx_sellers_county ON sellers(county);
+
+-- Seller profile photo (shown on storefront + seller hub)
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS avatar_url TEXT;
